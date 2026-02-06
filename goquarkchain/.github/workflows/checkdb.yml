@@ -1,0 +1,51 @@
+name: checkdb
+on:
+  schedule:
+    - cron: '0 13 * * *'
+jobs:
+  download-snapshot-and-checkdb:
+    runs-on: self-hosted
+    container: quarkchaindocker/goquarkchain:test1.6.1
+    timeout-minutes: 2880
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies and Build
+        run: |
+          echo "Install Dependencies and Build"
+          apt update && apt upgrade -y && apt install sshpass
+
+      - name: Download DB snapshot
+        run: |
+          cd cmd/cluster
+          mkdir  qkc-data
+          sshpass -p ${{ secrets.SBOX_SA_PASSWORD }} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null u446960-sub2@u446960-sub2.your-storagebox.de:VERSION-GO VERSION-GO
+          fileName=`cat VERSION-GO`
+          sshpass -p ${{ secrets.SBOX_SA_PASSWORD }} scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null u446960-sub2@u446960-sub2.your-storagebox.de:$fileName data.tar.gz
+          tar xvfz data.tar.gz
+          rm data.tar.gz && mv mainnet qkc-data
+
+      - name: Check DB
+        run: |
+          cd consensus/qkchash/native && make && cd -
+          cd cmd/cluster
+          go build
+          chmod +x cluster
+          cd - && cd cmd/cluster
+          ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --service S0>> S0.log 2>&1 &
+          ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --service S1>> S1.log 2>&1 &
+          ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --service S2>> S2.log 2>&1 &
+          ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --service S3>> S3.log 2>&1 &
+          sleep 3
+          cd - && cd cmd/cluster
+
+          WEEK_DAY=$(date +%w)
+          date
+          if [ $WEEK_DAY -eq 6 ];then
+                echo "Sunday:checkdb until 0 "
+                ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --check_db
+          else
+                echo "Not Sunday:checkdb 100k blocks"
+                ./cluster --cluster_config ../../mainnet/singularity/cluster_config_template.json --check_db --check_db_rblock_to=-100000
+          fi

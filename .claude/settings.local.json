@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.arbitrum.foundation)",
+      "WebFetch(domain:docs.zknation.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.starknet.io)",
+      "WebFetch(domain:docs.bnbchain.org)",
+      "WebFetch(domain:www.circle.com)",
+      "WebFetch(domain:arbiscan.io)",
+      "WebFetch(domain:docs.velodrome.finance)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.tastycrypto.com)",
+      "WebFetch(domain:iq.wiki)",
+      "WebFetch(domain:oakresearch.io)",
+      "WebFetch(domain:www.coingecko.com)",
+      "WebFetch(domain:www.herobullion.com)",
+      "WebFetch(domain:fortune.com)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git clone:*)",
+      "WebFetch(domain:docs.quarkchain.io)",
+      "WebFetch(domain:quarkchainio.medium.com)",
+      "WebFetch(domain:community.quarkchain.io)",
+      "WebFetch(domain:pages.near.org)",
+      "Bash(grep:*)",
+      "WebFetch(domain:docs.harmony.one)",
+      "Bash(find:*)",
+      "WebFetch(domain:open.harmony.one)",
+      "WebFetch(domain:dev.zilliqa.com)",
+      "WebFetch(domain:docs.zilliqa.com)",
+      "WebFetch(domain:blog.zilliqa.com)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(xargs -I {} bash -c 'echo {}')"
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+name: release
+on:
+  push:
+    tags:
+      - mainnet*
+
+
+jobs:
+  build_centos:
+    runs-on: ubuntu-latest
+    container: sunchunfeng/goqkc_centos8
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: centos8_build
+        run: |
+          cd consensus/qkchash/native && make && cd -
+          cd cmd/cluster && go build -o ./centos8/cluster
+
+      - name: upload cluster_centos
+        uses: actions/upload-artifact@v1
+        with:
+          name: cluster_centos
+          path: ./cmd/cluster/centos8/cluster
+
+
+  build_ubuntu:
+    runs-on: ubuntu-latest
+    container: quarkchaindocker/goquarkchain
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: ubuntu18-build
+        run: |
+          cd consensus/qkchash/native && make && cd -
+          cd cmd/cluster && go build -o ./ubuntu18/cluster
+
+      - name: upload cluster ubuntu
+        uses: actions/upload-artifact@v1
+        with:
+          name: cluster_ubuntu
+          path: ./cmd/cluster/ubuntu18/cluster
+
+
+  build_windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-toolchain swig gcc make
+      - name: windows-build
+        run: |
+          pacman -S --noconfirm mingw-w64-x86_64-go
+          export GOROOT=/mingw64/lib/go
+          export GOPATH=/mingw64
+          cd consensus/qkchash/native && make && cd -
+          go version
+          cd cmd/cluster && pwd && go build -o ./windows/cluster.exe
+
+
+      - name: upload cluster windows
+        uses: actions/upload-artifact@v1
+        with:
+          name: cluster_windows
+          path: ./cmd/cluster/windows/cluster.exe
+
+  build:
+    name: Upload Release Asset
+    needs: [build_centos, build_ubuntu,build_windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Download cluster_centos artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_centos
+          path: ./cmd/cluster/centos8
+
+
+      - name: Download cluster_ubuntu artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_ubuntu
+          path: ./cmd/cluster/ubuntu18
+
+      - name: Download cluster_windows artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_windows
+          path: ./cmd/cluster/windows
+
+      - name: mkdir folder
+        run: |
+          mkdir -p release
+          cp -rf  ./cmd/cluster/ubuntu18/ release/
+          cp -rf  ./cmd/cluster/windows/ release/
+          cp -rf  ./cmd/cluster/centos8/ release/
+          cp -rf  ./mainnet/singularity/cluster_config_template.json  release/
+          cp -rf  ./cmd/cluster/run_cluster.sh release/
+          zip -r release.zip release
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./release.zip
+          asset_name: release.zip
+          asset_content_type: application/zip
+  s3:
+    name: Upload S3
+    needs: [build_centos, build_ubuntu,build_windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Download cluster_centos artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_centos
+          path: ./cmd/cluster/centos8
+
+
+      - name: Download cluster_ubuntu artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_ubuntu
+          path: ./cmd/cluster/ubuntu18
+
+      - name: Download cluster_windows artifact
+        uses: actions/download-artifact@master
+        with:
+          name: cluster_windows
+          path: ./cmd/cluster/windows
+
+      - name: mkdir folder
+        run: |
+          ref=${{ github.ref }}
+          rep=${{ github.repository }}
+          folder=release/$rep/
+
+          mkdir -p $folder
+          cp -rf  ./mainnet/singularity/cluster_config_template.json ./cmd/cluster/ubuntu18/
+          cp -rf  ./mainnet/singularity/cluster_config_template.json ./cmd/cluster/centos8/
+          cp -rf  ./mainnet/singularity/cluster_config_template.json ./cmd/cluster/windows/
+          cp -rf  ./cmd/cluster/run_cluster.sh ./cmd/cluster/ubuntu18/
+          cp -rf  ./cmd/cluster/run_cluster.sh ./cmd/cluster/centos8/
+          cp -rf  ./cmd/cluster/run_cluster.sh ./cmd/cluster/windows/
+
+          chmod -R 0755 ./cmd/cluster/ubuntu18/
+          chmod -R 0755 ./cmd/cluster/centos8/
+          chmod -R 0755 ./cmd/cluster/windows/
+
+          cd ./cmd/cluster/ && zip -r ${ref:10}.zip ubuntu18/ centos8/  windows/ && cd -
+          cp ./cmd/cluster/${ref:10}.zip  release/$rep/
+          echo ${ref:10} > release/$rep/LATEST
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy static site to S3 bucket
+        run: |
+          sudo apt-get update && sudo apt-get install awscli -y
+          aws s3 sync release/ s3://goqkcmainnet/data/release
