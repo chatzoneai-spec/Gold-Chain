@@ -404,6 +404,21 @@ contract StakeHubTest is Deployer {
         assertEq(stakeHub.getLegacyDelegatedTokenB(validator, delegator), 0, "remaining stake should be converted");
     }
 
+    function testUpdateParam_ActivateTokenBMigration() public {
+        MiniToken oldGold = new MiniToken();
+        PhysicalGoldToken newGold = new PhysicalGoldToken("Physical Gold", "PGOLD");
+        LegacyGoldReserveVault reserveVault = new LegacyGoldReserveVault();
+
+        vm.prank(GOV_HUB_ADDR);
+        stakeHub.updateParam("stakeTokenB", abi.encodePacked(address(oldGold)));
+
+        vm.prank(GOV_HUB_ADDR);
+        stakeHub.updateParam("activateTokenBMigration", abi.encode(address(newGold), address(reserveVault)));
+
+        assertEq(stakeHub.legacyStakeTokenB(), address(oldGold), "wrong legacy token");
+        assertEq(stakeHub.stakeTokenB(), address(newGold), "wrong active token");
+    }
+
     function testElectionPower_UsesWeightedAndCappedTokenB() public {
         (address validator,, address credit,) = _createValidator(2000 ether);
         address delegator = _getNextUserAddress();

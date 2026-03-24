@@ -39,11 +39,14 @@ contract BSCGovernor is
     uint256 private constant INIT_VOTING_PERIOD = 7 days / BLOCK_INTERVAL;
     uint256 private constant INIT_PROPOSAL_THRESHOLD = 200 ether; //  = 200 GILT
     uint256 private constant INIT_QUORUM_NUMERATOR = 10; // for >= 10%
+    uint256 private constant ROUGHNET_CHAIN_ID = 714;
+    uint256 private constant ROUGHNET_VOTING_PERIOD = 20;
 
     // starting propose requires totalSupply of governance GILT >= 10000000 * 1e18
     uint256 private constant PROPOSE_START_GILT_SUPPLY_THRESHOLD = 10_000_000 ether;
     // ensures there is a minimum voting period (1 days) after quorum is reached
     uint64 private constant INIT_MIN_PERIOD_AFTER_QUORUM = uint64(1 days / BLOCK_INTERVAL);
+    uint64 private constant ROUGHNET_MIN_PERIOD_AFTER_QUORUM = 5;
 
     /*----------------- errors -----------------*/
     // @notice signature: 0x584a7938
@@ -64,13 +67,17 @@ contract BSCGovernor is
 
     /*----------------- init -----------------*/
     function initialize() external initializer onlyCoinbase onlyZeroGasPrice {
+        uint256 votingPeriod_ = block.chainid == ROUGHNET_CHAIN_ID ? ROUGHNET_VOTING_PERIOD : INIT_VOTING_PERIOD;
+        uint64 minPeriodAfterQuorum_ =
+            block.chainid == ROUGHNET_CHAIN_ID ? ROUGHNET_MIN_PERIOD_AFTER_QUORUM : INIT_MIN_PERIOD_AFTER_QUORUM;
+
         __Governor_init("GoldChainGovernor");
-        __GovernorSettings_init(INIT_VOTING_DELAY, INIT_VOTING_PERIOD, INIT_PROPOSAL_THRESHOLD);
+        __GovernorSettings_init(INIT_VOTING_DELAY, votingPeriod_, INIT_PROPOSAL_THRESHOLD);
         __GovernorCompatibilityBravo_init();
         __GovernorVotes_init(IVotesUpgradeable(GOV_TOKEN_ADDR));
         __GovernorTimelockControl_init(TimelockControllerUpgradeable(payable(TIMELOCK_ADDR)));
         __GovernorVotesQuorumFraction_init(INIT_QUORUM_NUMERATOR);
-        __GovernorPreventLateQuorum_init(INIT_MIN_PERIOD_AFTER_QUORUM);
+        __GovernorPreventLateQuorum_init(minPeriodAfterQuorum_);
 
         // GoldChainGovernor => Timelock => GovHub => system contracts
         whitelistTargets[GOV_HUB_ADDR] = true;

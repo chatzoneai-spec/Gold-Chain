@@ -29,6 +29,8 @@ contract StakeHub is SystemV2, Initializable, Protectable {
     uint256 public constant REDELEGATE_FEE_RATE_BASE = 100000; // 100%
 
     uint256 public constant BREATHE_BLOCK_INTERVAL = 1 days;
+    uint256 private constant ROUGHNET_CHAIN_ID = 714;
+    uint256 private constant ROUGHNET_UNBOND_PERIOD = 120 seconds;
 
     uint256 public constant INIT_MAX_NUMBER_NODE_ID = 5;
 
@@ -348,7 +350,7 @@ contract StakeHub is SystemV2, Initializable, Protectable {
         minSelfDelegationBNB = 2_000 ether;
         minDelegationBNBChange = 1 ether;
         maxElectedValidators = 45;
-        unbondPeriod = 7 days;
+        unbondPeriod = block.chainid == ROUGHNET_CHAIN_ID ? ROUGHNET_UNBOND_PERIOD : 7 days;
         redelegateFeeRate = 2;
         downtimeSlashAmount = 10 ether;
         felonySlashAmount = 200 ether;
@@ -821,6 +823,10 @@ contract StakeHub is SystemV2, Initializable, Protectable {
      * @param reserveVault the vault that will hold legacy token B after migration
      */
     function activateTokenBMigration(address newStakeTokenB, address reserveVault) external onlyGov {
+        _activateTokenBMigration(newStakeTokenB, reserveVault);
+    }
+
+    function _activateTokenBMigration(address newStakeTokenB, address reserveVault) internal {
         address currentStakeTokenB = stakeTokenB;
         if (currentStakeTokenB == address(0) || newStakeTokenB == address(0) || reserveVault == address(0)) {
             revert InvalidRequest();
@@ -1147,6 +1153,10 @@ contract StakeHub is SystemV2, Initializable, Protectable {
             address newStakeTokenB = value.bytesToAddress(20);
             if (newStakeTokenB == address(0) || legacyStakeTokenB != address(0)) revert InvalidValue(key, value);
             stakeTokenB = newStakeTokenB;
+        } else if (key.compareStrings("activateTokenBMigration")) {
+            if (value.length != 64) revert InvalidValue(key, value);
+            (address newStakeTokenB, address reserveVault) = abi.decode(value, (address, address));
+            _activateTokenBMigration(newStakeTokenB, reserveVault);
         } else if (key.compareStrings("stakeWeightA")) {
             if (value.length != 32) revert InvalidValue(key, value);
             uint256 newStakeWeightA = value.bytesToUint256(32);

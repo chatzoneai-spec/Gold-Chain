@@ -111,14 +111,25 @@ def generate_stake_hub(
     stake_hub_protector
 ):
     contract = "StakeHub.sol"
+    filepath = os.path.join(work_dir, "contracts", contract)
     backup_file(
-        os.path.join(work_dir, "contracts", contract), os.path.join(work_dir, "contracts", contract[:-4] + ".bak")
+        filepath, os.path.join(work_dir, "contracts", contract[:-4] + ".bak")
     )
 
     replace_parameter(contract, "uint256 public constant BREATHE_BLOCK_INTERVAL", f"{breathe_block_interval}")
 
+    with open(filepath, "r") as f:
+        content = f.read()
+
     replace(contract, r"maxElectedValidators = .*;", f"maxElectedValidators = {max_elected_validators};")
-    replace(contract, r"unbondPeriod = .*;", f"unbondPeriod = {unbond_period};")
+    if "ROUGHNET_UNBOND_PERIOD" in content:
+        replace(
+            contract,
+            r"unbondPeriod = .*;",
+            f"unbondPeriod = block.chainid == ROUGHNET_CHAIN_ID ? ROUGHNET_UNBOND_PERIOD : {unbond_period};"
+        )
+    else:
+        replace(contract, r"unbondPeriod = .*;", f"unbondPeriod = {unbond_period};")
     replace(contract, r"downtimeJailTime = .*;", f"downtimeJailTime = {downtime_jail_time};")
     replace(contract, r"felonyJailTime = .*;", f"felonyJailTime = {felony_jail_time};")
     replace(contract, r"__Protectable_init_unchained\(.*\);", f"__Protectable_init_unchained({stake_hub_protector});")
@@ -138,9 +149,14 @@ def generate_governor(
     replace_parameter(contract, "uint256 private constant INIT_VOTING_PERIOD", f"{init_voting_period}")
     replace_parameter(contract, "uint256 private constant INIT_PROPOSAL_THRESHOLD", f"{init_proposal_threshold}")
     replace_parameter(contract, "uint256 private constant INIT_QUORUM_NUMERATOR", f"{init_quorum_numerator}")
-    replace_parameter(
-        contract, "uint256 private constant PROPOSE_START_GOVBNB_SUPPLY_THRESHOLD", f"{propose_start_threshold}"
-    )
+    try:
+        replace_parameter(
+            contract, "uint256 private constant PROPOSE_START_GOVBNB_SUPPLY_THRESHOLD", f"{propose_start_threshold}"
+        )
+    except Exception:
+        replace_parameter(
+            contract, "uint256 private constant PROPOSE_START_GILT_SUPPLY_THRESHOLD", f"{propose_start_threshold}"
+        )
     replace_parameter(
         contract, "uint64 private constant INIT_MIN_PERIOD_AFTER_QUORUM", f"{init_min_period_after_quorum}"
     )
@@ -203,26 +219,31 @@ def generate_token_recover_portal(source_chain_id, token_recover_portal_protecto
 
 def generate_validator_set(init_validator_set_bytes, init_burn_ratio):
     contract = "BSCValidatorSet.sol"
+    filepath = os.path.join(work_dir, "contracts", contract)
     backup_file(
-        os.path.join(work_dir, "contracts", contract), os.path.join(work_dir, "contracts", contract[:-4] + ".bak")
+        filepath, os.path.join(work_dir, "contracts", contract[:-4] + ".bak")
     )
 
     replace_parameter(contract, "uint256 public constant INIT_BURN_RATIO", f"{init_burn_ratio}")
     replace_parameter(contract, "bytes public constant INIT_VALIDATORSET_BYTES", f"hex\"{init_validator_set_bytes}\"")
 
     if network == "dev":
-        insert(
-            contract, r"for \(uint256 i; i < validatorSetPkg\.validatorSet\.length; \+\+i\)",
-            "\t\tValidatorExtra memory validatorExtra;"
-        )
-        insert(
-            contract, r"currentValidatorSet\.push\(validatorSetPkg.validatorSet\[i\]\);",
-            "\t\t\tvalidatorExtraSet.push(validatorExtra);"
-        )
-        insert(
-            contract, r"currentValidatorSet\.push\(validatorSetPkg.validatorSet\[i\]\);",
-            "\t\t\tvalidatorExtraSet[i].voteAddress=validatorSetPkg.voteAddrs[i];"
-        )
+        with open(filepath, "r") as f:
+            content = f.read()
+
+        if "validatorExtraSet.push(validatorExtra);" not in content:
+            insert(
+                contract, r"for \(uint256 i; i < validatorSetPkg\.validatorSet\.length; \+\+i\)",
+                "\t\tValidatorExtra memory validatorExtra;"
+            )
+            insert(
+                contract, r"currentValidatorSet\.push\(validatorSetPkg.validatorSet\[i\]\);",
+                "\t\t\tvalidatorExtraSet.push(validatorExtra);"
+            )
+            insert(
+                contract, r"currentValidatorSet\.push\(validatorSetPkg.validatorSet\[i\]\);",
+                "\t\t\tvalidatorExtraSet[i].voteAddress=validatorSetPkg.voteAddrs[i];"
+            )
         replace(
             contract,
             r"handleSynPackage\(\s*uint8,\s*bytes calldata msgBytes\s*\) external override onlyInit onlyCrossChainContract initValidatorExtraSet",
@@ -385,7 +406,8 @@ def dev(
     init_proposal_threshold: Annotated[str, typer.Option(help="INIT_PROPOSAL_THRESHOLD of BSCGovernor")] = "200 ether",
     init_quorum_numerator: Annotated[str, typer.Option(help="INIT_QUORUM_NUMERATOR of BSCGovernor")] = "10",
     propose_start_threshold: Annotated[
-        str, typer.Option(help="PROPOSE_START_GOVBNB_SUPPLY_THRESHOLD of BSCGovernor")] = "10_000_000 ether",
+        str, typer.Option(help="PROPOSE_START_GOVBNB_SUPPLY_THRESHOLD / PROPOSE_START_GILT_SUPPLY_THRESHOLD of BSCGovernor")
+    ] = "10_000_000 ether",
     init_min_period_after_quorum: Annotated[
         str, typer.Option(help="INIT_MIN_PERIOD_AFTER_QUORUM of BSCGovernor")] = "uint64(1 days / BLOCK_INTERVAL)",
     init_minimal_delay: Annotated[str, typer.Option(help="INIT_MINIMAL_DELAY of BSCTimelock")] = "24 hours",

@@ -15,12 +15,15 @@ contract BSCTimelock is SystemV2, Initializable, TimelockControllerUpgradeable {
      * @dev caution: minDelay using second as unit
      */
     uint256 private constant INIT_MINIMAL_DELAY = 24 hours;
+    uint256 private constant ROUGHNET_CHAIN_ID = 714;
+    uint256 private constant ROUGHNET_MINIMAL_DELAY = 60 seconds;
 
     /*----------------- init -----------------*/
     function initialize() external initializer onlyCoinbase onlyZeroGasPrice {
         address[] memory _governor = new address[](1);
         _governor[0] = GOVERNOR_ADDR;
-        __TimelockController_init(INIT_MINIMAL_DELAY, _governor, _governor, GOVERNOR_ADDR);
+        uint256 minimalDelay = block.chainid == ROUGHNET_CHAIN_ID ? ROUGHNET_MINIMAL_DELAY : INIT_MINIMAL_DELAY;
+        __TimelockController_init(minimalDelay, _governor, _governor, GOVERNOR_ADDR);
     }
 
     /*----------------- system functions -----------------*/
