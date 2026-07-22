@@ -1498,10 +1498,10 @@ importers:
       '@binance/w3w-wagmi-connector-v2':
         specifier: ^1.2.8
         version: 1.2.8(bufferutil@4.0.8)(encoding@0.1.13)(ts-node@10.9.1(@types/node@18.19.75)(typescript@5.7.3))(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))(wagmi@2.17.5(@react-native-async-storage/async-storage@1.24.0(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10)))(@tanstack/query-core@5.69.0)(@tanstack/react-query@5.52.1(react@18.2.0))(@types/react@18.2.37)(bufferutil@4.0.8)(encoding@0.1.13)(immer@9.0.21)(react@18.2.0)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))(zod@3.25.67))
-      '@gilt-chain/canonical-bridge-sdk':
+      '@bnb-chain/canonical-bridge-sdk':
         specifier: 0.7.2
         version: 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@5.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.10.0)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
-      '@gilt-chain/canonical-bridge-widget':
+      '@bnb-chain/canonical-bridge-widget':
         specifier: 0.10.3
         version: 0.10.3(083a88f0d04624bcf606c257070bd182)
       '@cyberlab/cyber-app-sdk':
@@ -2257,10 +2257,10 @@ importers:
 
   packages/canonical-bridge:
     dependencies:
-      '@gilt-chain/canonical-bridge-sdk':
+      '@bnb-chain/canonical-bridge-sdk':
         specifier: 0.7.2
         version: 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@6.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.6.8)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
-      '@gilt-chain/canonical-bridge-widget':
+      '@bnb-chain/canonical-bridge-widget':
         specifier: 0.10.3
         version: 0.10.3(df3ad49b0f07e09939e08cfdcfbc820b)
       '@emotion/react':
@@ -5528,7 +5528,7 @@ packages:
       aptos:
         optional: true
 
-  '@gilt-chain/canonical-bridge-sdk@0.7.2':
+  '@bnb-chain/canonical-bridge-sdk@0.7.2':
     resolution: {integrity: sha512-l57Eh37egUaWgfpuBC2BLrBhERLTIhWjMvL2PEwC5r9yZmC1LFSyPEl5LtT1YnYZWas8/piYNDJ2Zr+RfTrxvA==}
     peerDependencies:
       '@solana/wallet-adapter-react': 0.15.39
@@ -5536,10 +5536,10 @@ packages:
       axios: '>=1.7.4'
       viem: ~2.21.14
 
-  '@gilt-chain/canonical-bridge-widget@0.10.3':
+  '@bnb-chain/canonical-bridge-widget@0.10.3':
     resolution: {integrity: sha512-2GdXvJv3DNzAuuZIgqX1avl+GUKUBQjPHe6qtOrnBRyEbnaPwWWZJ2wVr2KWoezLf91qb1oMaN2FLZ/+g87mFg==}
     peerDependencies:
-      '@gilt-chain/canonical-bridge-sdk': workspace:*
+      '@bnb-chain/canonical-bridge-sdk': workspace:*
       '@emotion/react': ^11
       '@emotion/styled': ^11
       '@solana/spl-token': ^0
@@ -5553,13 +5553,13 @@ packages:
       viem: ~2.21.14
       wagmi: ^2
 
-  '@gilt-chain/icons@1.0.1':
+  '@bnb-chain/icons@1.0.1':
     resolution: {integrity: sha512-dOQwWqaaqh26eUz5KSDBO5WykSGFD2xLdWQOsJ1pNAWcx5W4/5hkvlT+cre2SfBKAPoIgJFVt76PTIqtASNUWQ==}
 
-  '@gilt-chain/space@1.0.3':
+  '@bnb-chain/space@1.0.3':
     resolution: {integrity: sha512-4oynNTe+4xcIBpiHgqpSz8cu/6YOWP8VqlHsr4+MgRyT2QMK0k0D1ICvAmplHBjFOYwwEPvpT6OtL9wW2pvRlw==}
     peerDependencies:
-      '@gilt-chain/icons': ^1
+      '@bnb-chain/icons': ^1
 
   '@bytecodealliance/preview2-shim@0.17.2':
     resolution: {integrity: sha512-mNm/lblgES8UkVle8rGImXOz4TtL3eU3inHay/7TVchkKrb/lgcVvTK0+VAw8p5zQ0rgQsXm1j5dOlAAd+MeoA==}
@@ -28345,7 +28345,7 @@ snapshots:
       - debug
       - utf-8-validate
 
-  '@gilt-chain/canonical-bridge-sdk@0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@5.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.10.0)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))':
+  '@bnb-chain/canonical-bridge-sdk@0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@5.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.10.0)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))':
     dependencies:
       '@layerzerolabs/lz-v2-utilities': 3.0.124
       '@layerzerolabs/oft-v2-solana-sdk': 3.0.124(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
@@ -28371,7 +28371,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@gilt-chain/canonical-bridge-sdk@0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@6.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.6.8)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))':
+  '@bnb-chain/canonical-bridge-sdk@0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@6.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.6.8)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))':
     dependencies:
       '@layerzerolabs/lz-v2-utilities': 3.0.124
       '@layerzerolabs/oft-v2-solana-sdk': 3.0.124(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)
@@ -28397,11 +28397,11 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@gilt-chain/canonical-bridge-widget@0.10.3(083a88f0d04624bcf606c257070bd182)':
+  '@bnb-chain/canonical-bridge-widget@0.10.3(083a88f0d04624bcf606c257070bd182)':
     dependencies:
-      '@gilt-chain/canonical-bridge-sdk': 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@5.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.10.0)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
-      '@gilt-chain/icons': 1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
-      '@gilt-chain/space': 1.0.3(@gilt-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)
+      '@bnb-chain/canonical-bridge-sdk': 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@5.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.10.0)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
+      '@bnb-chain/icons': 1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
+      '@bnb-chain/space': 1.0.3(@bnb-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)
       '@emotion/react': 11.13.5(@types/react@18.2.37)(react@18.2.0)
       '@emotion/styled': 11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)
       '@mayanfinance/swap-sdk': 10.6.1(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10)
@@ -28426,11 +28426,11 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@gilt-chain/canonical-bridge-widget@0.10.3(df3ad49b0f07e09939e08cfdcfbc820b)':
+  '@bnb-chain/canonical-bridge-widget@0.10.3(df3ad49b0f07e09939e08cfdcfbc820b)':
     dependencies:
-      '@gilt-chain/canonical-bridge-sdk': 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@6.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.6.8)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
-      '@gilt-chain/icons': 1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
-      '@gilt-chain/space': 1.0.3(@gilt-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)
+      '@bnb-chain/canonical-bridge-sdk': 0.7.2(@solana/wallet-adapter-react@0.15.39(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(bs58@6.0.0)(react-native@0.73.6(@babel/core@7.23.9)(@babel/preset-env@7.23.3(@babel/core@7.23.9))(bufferutil@4.0.8)(encoding@0.1.13)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0))(@solana/web3.js@1.98.4(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10))(axios@1.6.8)(bufferutil@4.0.8)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.7.3)(utf-8-validate@5.0.10)(viem@2.37.13(bufferutil@4.0.8)(typescript@5.7.3)(utf-8-validate@5.0.10)(zod@3.25.67))
+      '@bnb-chain/icons': 1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
+      '@bnb-chain/space': 1.0.3(@bnb-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)
       '@emotion/react': 11.11.4(@types/react@18.2.37)(react@18.2.0)
       '@emotion/styled': 11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)
       '@mayanfinance/swap-sdk': 10.6.1(bufferutil@4.0.8)(encoding@0.1.13)(typescript@5.7.3)(utf-8-validate@5.0.10)
@@ -28455,7 +28455,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@gilt-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))':
+  '@bnb-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))':
     dependencies:
       '@chakra-ui/icons': 2.0.19(@chakra-ui/system@2.5.8(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(react@18.2.0))(react@18.2.0)
       '@chakra-ui/system': 2.5.8(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(react@18.2.0)
@@ -28464,7 +28464,7 @@ snapshots:
       - '@emotion/react'
       - '@emotion/styled'
 
-  '@gilt-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))':
+  '@bnb-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))':
     dependencies:
       '@chakra-ui/icons': 2.0.19(@chakra-ui/system@2.5.8(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(react@18.2.0))(react@18.2.0)
       '@chakra-ui/system': 2.5.8(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(react@18.2.0)
@@ -28473,9 +28473,9 @@ snapshots:
       - '@emotion/react'
       - '@emotion/styled'
 
-  '@gilt-chain/space@1.0.3(@gilt-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)':
+  '@bnb-chain/space@1.0.3(@bnb-chain/icons@1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)':
     dependencies:
-      '@gilt-chain/icons': 1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
+      '@bnb-chain/icons': 1.0.1(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.11.5(@emotion/react@11.11.4(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
       '@chakra-ui/anatomy': 2.1.2
       '@chakra-ui/breakpoint-utils': 2.0.8
       '@chakra-ui/react': 2.7.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(framer-motion@10.2.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -28500,9 +28500,9 @@ snapshots:
       - '@types/react'
       - typescript
 
-  '@gilt-chain/space@1.0.3(@gilt-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)':
+  '@bnb-chain/space@1.0.3(@bnb-chain/icons@1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0)))(@types/react@18.2.37)(typescript@5.7.3)':
     dependencies:
-      '@gilt-chain/icons': 1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
+      '@bnb-chain/icons': 1.0.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))
       '@chakra-ui/anatomy': 2.1.2
       '@chakra-ui/breakpoint-utils': 2.0.8
       '@chakra-ui/react': 2.7.1(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@emotion/styled@11.13.5(@emotion/react@11.13.5(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(react@18.2.0))(@types/react@18.2.37)(framer-motion@10.2.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)

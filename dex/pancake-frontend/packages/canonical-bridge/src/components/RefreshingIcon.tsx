@@ -1,4 +1,4 @@
-import { useBridge } from '@gilt-chain/canonical-bridge-widget'
+import { useBridge } from '@bnb-chain/canonical-bridge-widget'
 import { Svg, SvgProps } from '@pancakeswap/uikit'
 import { keyframes, styled } from 'styled-components'
 

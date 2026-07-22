@@ -1,4 +1,4 @@
-import { locales } from '@gilt-chain/canonical-bridge-widget'
+import { locales } from '@bnb-chain/canonical-bridge-widget'
 
 export const en = {
   ...locales.en,

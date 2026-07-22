@@ -27,11 +27,11 @@ contract('RootChainManager shared GOLD route', (accounts) => {
   const runRoute = async ({ route, tokenId }) => {
     const contracts = await deployInitializedContracts(accounts)
     const rootChainManager = contracts.root.rootChainManager
-    const childGold1155 = contracts.child.childGold1155
+    const physicalGold1155 = contracts.child.physicalGold1155
     const depositReceiver = accounts[0]
     const rootAmount = 2n
     const rootToken = route === 'paxg' ? contracts.root.dummyPaxgERC20 : contracts.root.dummyXautERC20
-    const routeConfig = await childGold1155.routePrecisionByTokenId(tokenId)
+    const routeConfig = await physicalGold1155.bridgeRoutePrecision(tokenId)
     const childAmount = (rootAmount * routeConfig.scaleNumerator) / routeConfig.scaleDenominator
 
     const oldRootBalance = await rootToken.balanceOf(depositReceiver)
@@ -46,9 +46,9 @@ contract('RootChainManager shared GOLD route', (accounts) => {
     const syncTxs = await syncState(depositReceipt)
     await Promise.all(syncTxs.map((tx) => tx.wait()))
 
-    expect(await childGold1155.balanceOf(depositReceiver, tokenId)).to.equal(childAmount)
+    expect(await physicalGold1155.balanceOf(depositReceiver, tokenId)).to.equal(childAmount)
 
-    const withdrawTx = await childGold1155.withdrawSingle(tokenId, childAmount)
+    const withdrawTx = await physicalGold1155.withdrawSingle(tokenId, childAmount)
     await withdrawTx.wait()
     const withdrawReceipt = await web3.eth.getTransactionReceipt(withdrawTx.hash)
 

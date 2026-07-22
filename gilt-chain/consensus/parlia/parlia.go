@@ -113,6 +113,20 @@ var (
 	}
 )
 
+func configuredEpochLength(config *params.ParliaConfig) uint64 {
+	if config != nil && config.Epoch != 0 {
+		return config.Epoch
+	}
+	return defaultEpochLength
+}
+
+func configuredBlockInterval(config *params.ParliaConfig) uint64 {
+	if config != nil && config.Period != 0 {
+		return config.Period * 1000
+	}
+	return defaultBlockInterval
+}
+
 // Various error messages to mark blocks invalid. These should be private to
 // prevent engine specific errors from being referenced in the remainder of the
 // codebase, inherently breaking if the engine is swapped out. Please put common
@@ -808,8 +822,8 @@ func (p *Parlia) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 			var (
 				checkpoint    *types.Header
 				blockHash     common.Hash
-				blockInterval = defaultBlockInterval
-				epochLength   = defaultEpochLength
+				blockInterval = configuredBlockInterval(p.config)
+				epochLength   = configuredEpochLength(p.config)
 			)
 			if number == 0 {
 				checkpoint = chain.GetHeaderByNumber(0)
@@ -2460,14 +2474,14 @@ func (p *Parlia) backOffTime(snap *Snapshot, parent, header *types.Header, val c
 // BlockInterval returns number of blocks in one epoch for the given header
 func (p *Parlia) epochLength(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) (uint64, error) {
 	if header == nil {
-		return defaultEpochLength, errUnknownBlock
+		return configuredEpochLength(p.config), errUnknownBlock
 	}
 	if header.Number.Uint64() == 0 {
-		return defaultEpochLength, nil
+		return configuredEpochLength(p.config), nil
 	}
 	snap, err := p.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, parents)
 	if err != nil {
-		return defaultEpochLength, err
+		return configuredEpochLength(p.config), err
 	}
 	return snap.EpochLength, nil
 }
@@ -2475,14 +2489,14 @@ func (p *Parlia) epochLength(chain consensus.ChainHeaderReader, header *types.He
 // BlockInterval returns the block interval in milliseconds for the given header
 func (p *Parlia) BlockInterval(chain consensus.ChainHeaderReader, header *types.Header) (uint64, error) {
 	if header == nil {
-		return defaultBlockInterval, errUnknownBlock
+		return configuredBlockInterval(p.config), errUnknownBlock
 	}
 	if header.Number.Uint64() == 0 {
-		return defaultBlockInterval, nil
+		return configuredBlockInterval(p.config), nil
 	}
 	snap, err := p.snapshot(chain, header.Number.Uint64()-1, header.ParentHash, nil)
 	if err != nil {
-		return defaultBlockInterval, err
+		return configuredBlockInterval(p.config), err
 	}
 	return snap.BlockInterval, nil
 }

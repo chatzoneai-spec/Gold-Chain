@@ -13,7 +13,7 @@ import {
   createGTMEventListener,
   IBridgeConfig,
   EventTypes,
-} from '@gilt-chain/canonical-bridge-widget'
+} from '@bnb-chain/canonical-bridge-widget'
 import { allCasesNameToChainId } from '@pancakeswap/chains'
 import { useTheme } from 'styled-components'
 import { useAccount } from 'wagmi'

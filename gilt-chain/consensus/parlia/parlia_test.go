@@ -1514,3 +1514,34 @@ func TestSignBAL_VerifyBAL_Integration(t *testing.T) {
 		})
 	}
 }
+
+func TestConfiguredParliaEpochAndPeriod(t *testing.T) {
+	cfg := &params.ParliaConfig{Period: 2, Epoch: 1234}
+	if got := configuredEpochLength(cfg); got != 1234 {
+		t.Fatalf("configured epoch not applied: got %d want %d", got, 1234)
+	}
+	if got := configuredBlockInterval(cfg); got != 2000 {
+		t.Fatalf("configured period not converted to milliseconds: got %d want %d", got, 2000)
+	}
+}
+
+func TestParliaDefaultsRemainBSCCompatibleWhenUnset(t *testing.T) {
+	cfg := &params.ParliaConfig{}
+	if got := configuredEpochLength(cfg); got != defaultEpochLength {
+		t.Fatalf("empty parlia config should use default epoch: got %d want %d", got, defaultEpochLength)
+	}
+	if got := configuredBlockInterval(cfg); got != defaultBlockInterval {
+		t.Fatalf("empty parlia config should use default block interval: got %d want %d", got, defaultBlockInterval)
+	}
+}
+
+func TestNewSnapshotUsesConfiguredParliaEpochAndPeriod(t *testing.T) {
+	cfg := &params.ParliaConfig{Period: 5, Epoch: 2000000}
+	snap := newSnapshot(cfg, nil, 0, common.Hash{}, []common.Address{common.HexToAddress("0x0000000000000000000000000000000000000001")}, nil, nil)
+	if snap.EpochLength != 2000000 {
+		t.Fatalf("snapshot epoch length mismatch: got %d want %d", snap.EpochLength, 2000000)
+	}
+	if snap.BlockInterval != 5000 {
+		t.Fatalf("snapshot block interval mismatch: got %d want %d", snap.BlockInterval, 5000)
+	}
+}

@@ -146,7 +146,7 @@ async function main() {
 
   const results = [];
 
-  // Finish the already-burned PAXG-backed GOLD exit first.
+  // Finish the PAXG-backed GOLD exit whose child-chain GOLD burn was already submitted.
   {
     const rootBefore = await rootPaxg.balanceOf(sepoliaUser.address);
     const paxgWithdrawTxHash = '0x4838bfd3e68c7148474f9bba1af8e41725ead310a4e5340b060037c1e0bdc265';

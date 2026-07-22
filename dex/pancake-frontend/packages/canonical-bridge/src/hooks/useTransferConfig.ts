@@ -12,7 +12,7 @@ import {
   meson,
   stargate,
   mayan,
-} from '@gilt-chain/canonical-bridge-widget'
+} from '@bnb-chain/canonical-bridge-widget'
 import { useEffect, useState } from 'react'
 
 import axios from 'axios'

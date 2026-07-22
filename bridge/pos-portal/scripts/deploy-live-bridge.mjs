@@ -1089,8 +1089,8 @@ async function main() {
   await ensureLiveGovernanceReadiness(roughnetProvider, validatorWallet, governanceWallet, childChainId);
   await governContractCall(
     roughnetProvider,
-    [await childGold.getAddress(), await childGold.getAddress(), await childGold.getAddress()],
-    [0, 0, 0],
+    [await childGold.getAddress(), await childGold.getAddress(), await childGold.getAddress(), await childGold.getAddress()],
+    [0, 0, 0, 0],
     [
       childGold.interface.encodeFunctionData('setBridgeRoutePrecision', [
         GOLD_ROUTE_CONFIG.PAXG.tokenId,
@@ -1109,8 +1109,9 @@ async function main() {
         GOLD_ROUTE_CONFIG.XAUT.rootUnit,
       ]),
       childGold.interface.encodeFunctionData('setBridgeDepositor', [await childChainManager.getAddress()]),
+      childGold.interface.encodeFunctionData('finalizeBridgeRoutePrecision'),
     ],
-    'Configure GOLD bridge routes and set bridge depositor',
+    'Configure GOLD bridge routes, set bridge depositor, and finalize route precision',
     governanceWallet,
     roughnetSigner,
   );

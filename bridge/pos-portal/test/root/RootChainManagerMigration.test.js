@@ -15,15 +15,15 @@ contract('RootChainManager migration allowlist', (accounts) => {
 
   it('Should keep both gold routes mapped to one child GOLD contract', async () => {
     expect(await rootChainManager.rootToChildToken(contracts.root.dummyPaxgERC20.target)).to.equal(
-      contracts.child.childGold1155.target
+      contracts.child.physicalGold1155.target
     )
     expect(await rootChainManager.rootToChildToken(contracts.root.dummyXautERC20.target)).to.equal(
-      contracts.child.childGold1155.target
+      contracts.child.physicalGold1155.target
     )
-    expect(await rootChainManager.goldRootTokenByChildTokenId(contracts.child.childGold1155.target, 1)).to.equal(
+    expect(await rootChainManager.goldRootTokenByChildTokenId(contracts.child.physicalGold1155.target, 1)).to.equal(
       contracts.root.dummyPaxgERC20.target
     )
-    expect(await rootChainManager.goldRootTokenByChildTokenId(contracts.child.childGold1155.target, 2)).to.equal(
+    expect(await rootChainManager.goldRootTokenByChildTokenId(contracts.child.physicalGold1155.target, 2)).to.equal(
       contracts.root.dummyXautERC20.target
     )
   })
@@ -48,7 +48,7 @@ contract('RootChainManager migration allowlist', (accounts) => {
     await rootChainManager.setTokenMigrationManager(contracts.root.dummyPaxgERC20.target, true)
 
     await expect(
-      rootChainManager.cleanMapToken(contracts.root.dummyPaxgERC20.target, contracts.child.childGold1155.target)
+      rootChainManager.cleanMapToken(contracts.root.dummyPaxgERC20.target, contracts.child.physicalGold1155.target)
     ).to.be.revertedWith('RootChainManager: MIGRATION_TOKEN_LOCKED')
   })
 })

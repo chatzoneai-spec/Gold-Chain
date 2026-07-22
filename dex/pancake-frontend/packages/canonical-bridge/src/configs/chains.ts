@@ -1,4 +1,4 @@
-import { IChainConfig } from '@gilt-chain/canonical-bridge-widget'
+import { IChainConfig } from '@bnb-chain/canonical-bridge-widget'
 
 export const chains: IChainConfig[] = [
   {

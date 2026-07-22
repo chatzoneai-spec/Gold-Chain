@@ -789,11 +789,16 @@ func (c CliqueConfig) String() string {
 
 // ParliaConfig is the consensus engine configs for proof-of-staked-authority based sealing.
 type ParliaConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce (0 = client default)
+	Epoch  uint64 `json:"epoch"`  // Epoch length to checkpoint/update validators (0 = client default)
 }
 
 // String implements the stringer interface, returning the consensus engine details.
 func (b *ParliaConfig) String() string {
-	return "parlia"
+	if b == nil {
+		return "parlia"
+	}
+	return fmt.Sprintf("parlia(period: %d, epoch: %d)", b.Period, b.Epoch)
 }
 
 func (c *ChainConfig) Description() string {

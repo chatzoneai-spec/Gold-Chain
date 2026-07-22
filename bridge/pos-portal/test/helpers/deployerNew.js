@@ -1,4 +1,34 @@
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { etherAddress, mockValues } from './constants.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(__dirname, '../../../..')
+
+const readPhysicalGoldArtifact = () => {
+  const foundryPath = path.join(repoRoot, 'gilt-genesis-contract/out/PhysicalGold1155.sol/PhysicalGold1155.json')
+  if (fs.existsSync(foundryPath)) {
+    const artifact = JSON.parse(fs.readFileSync(foundryPath, 'utf8'))
+    return { abi: artifact.abi, bytecode: artifactBytecode(artifact) }
+  }
+
+  const solcjsDir = path.join(repoRoot, 'gilt-genesis-contract/out/solcjs')
+  const abiPath = path.join(solcjsDir, 'contracts_PhysicalGold1155_sol_PhysicalGold1155.abi')
+  const binPath = path.join(solcjsDir, 'contracts_PhysicalGold1155_sol_PhysicalGold1155.bin')
+  if (fs.existsSync(abiPath) && fs.existsSync(binPath)) {
+    return {
+      abi: JSON.parse(fs.readFileSync(abiPath, 'utf8')),
+      bytecode: `0x${fs.readFileSync(binPath, 'utf8').trim()}`
+    }
+  }
+
+  throw new Error(
+    'Missing PhysicalGold1155 artifact; run `forge build` in gilt-genesis-contract or compile it with solcjs before bridge tests'
+  )
+}
+
+const artifactBytecode = (artifact) => artifact.bytecode?.object || artifact.bytecode
 
 export const deployFreshRootContracts = async (accounts) => {
   console.log('Deploying root contracts...')
@@ -287,14 +317,21 @@ export const deployFreshChildContracts = async (accounts) => {
   )
   await dummyMintableERC20.waitForDeployment()
 
-  const ChildGold1155 = await ethers.getContractFactory('ChildGold1155')
-  const childGold1155 = await ChildGold1155.deploy(
-    'ipfs://gold/{id}.json',
-    childChainManager.target,
-    1000,
-    1
+  const physicalGoldArtifact = readPhysicalGoldArtifact()
+  const PhysicalGold1155 = new ethers.ContractFactory(
+    physicalGoldArtifact.abi,
+    artifactBytecode(physicalGoldArtifact),
+    await ethers.getSigner(accounts[0])
   )
-  await childGold1155.waitForDeployment()
+  const physicalGold1155 = await PhysicalGold1155.deploy(
+    'ipfs://gold/{id}.json',
+    1000,
+    1,
+    accounts[0]
+  )
+  await physicalGold1155.waitForDeployment()
+  await physicalGold1155.setBridgeDepositor(accounts[0])
+  await physicalGold1155.finalizeBridgeRoutePrecision()
 
   const MockChildNativeGilt = await ethers.getContractFactory('MockChildNativeGilt')
   const childNativeGilt = await MockChildNativeGilt.deploy(childChainManager.target)
@@ -366,7 +403,7 @@ export const deployFreshChildContracts = async (accounts) => {
     childPotatoFarm,
     childPotatoMigrator,
     childPotatoToken,
-    childGold1155,
+    physicalGold1155,
     childNativeGilt,
     dummyERC1155,
     dummyERC20,
@@ -442,26 +479,27 @@ export const deployInitializedContracts = async (accounts) => {
   )
   await root.rootChainManager.mapGoldToken(
     root.dummyPaxgERC20.target,
-    child.childGold1155.target,
+    child.physicalGold1155.target,
     1,
     ScaledERC1155Type
   )
   await child.childChainManager.mapTokenWithType(
     root.dummyPaxgERC20.target,
-    child.childGold1155.target,
+    child.physicalGold1155.target,
     ScaledERC1155Type
   )
   await root.rootChainManager.mapGoldToken(
     root.dummyXautERC20.target,
-    child.childGold1155.target,
+    child.physicalGold1155.target,
     2,
     ScaledERC1155Type
   )
   await child.childChainManager.mapTokenWithType(
     root.dummyXautERC20.target,
-    child.childGold1155.target,
+    child.physicalGold1155.target,
     ScaledERC1155Type
   )
+  await child.physicalGold1155.setBridgeDepositor(child.childChainManager.target)
 
   const ERC721Type = await root.erc721Predicate.TOKEN_TYPE()
   await root.erc721Predicate.grantRole(MANAGER_ROLE, root.rootChainManager.target)

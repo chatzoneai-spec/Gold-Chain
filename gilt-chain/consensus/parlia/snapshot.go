@@ -76,8 +76,8 @@ func newSnapshot(
 		sigCache:         sigCache,
 		Number:           number,
 		Hash:             hash,
-		EpochLength:      defaultEpochLength,
-		BlockInterval:    defaultBlockInterval,
+		EpochLength:      configuredEpochLength(config),
+		BlockInterval:    configuredBlockInterval(config),
 		TurnLength:       defaultTurnLength,
 		Recents:          make(map[uint64]common.Address),
 		RecentForkHashes: make(map[uint64]string),
@@ -122,10 +122,10 @@ func loadSnapshot(config *params.ParliaConfig, sigCache *lru.Cache[common.Hash, 
 		return nil, err
 	}
 	if snap.EpochLength == 0 { // no EpochLength field in old snapshots
-		snap.EpochLength = defaultEpochLength
+		snap.EpochLength = configuredEpochLength(config)
 	}
 	if snap.BlockInterval == 0 { // no BlockInterval field in old snapshots
-		snap.BlockInterval = defaultBlockInterval
+		snap.BlockInterval = configuredBlockInterval(config)
 	}
 	if snap.TurnLength == 0 { // no TurnLength field in old snapshots
 		snap.TurnLength = defaultTurnLength
