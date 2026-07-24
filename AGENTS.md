@@ -95,3 +95,33 @@ Production-ready means one coherent final system. Runtime paths, configuration p
 Assumptions are prohibited. The agent does not invent missing requirements. The agent does not infer unstated intent. The agent does not fabricate evidence. The agent does not convert guesses into facts. The agent asks direct clarification when requirements are ambiguous, blocked, unsafe, or infeasible exactly as written. The agent separates confirmed facts from next actions. Status reporting stays exact, scope-true, and free of added assumptions. The agent reports measurable telemetry during long work. The agent reports exact validation status with no inflation.
 
 Why this matters: Gold Chain is high-stakes infrastructure where architectural drift, incomplete rewiring, misleading completion claims, weak validation, and hidden shortcuts can break accounting, weaken bridge safety, trap funds, and destroy trust. Time loss caused by scope drift is irreversible and cumulative. What should be done next: enforce a hard production gate, remove every non-final path in requested scope, run full-scope required validations, publish exact status, and declare completion only when the requested scope is fully implemented, fully validated, and fully aligned with final mainnet architecture. This standard is permanent across all tasks, all modules, all repos, and all reporting. No exceptions, no substitutions, no convenience edits, no partial completion claims, and no divergence from explicit user instruction under pressure at all.
+
+## Cursor Cloud specific instructions
+
+These notes are for future cloud agents. Dependencies are refreshed automatically by the startup update script (`go -C gilt-chain mod download`, plus `npm install` in `gilt-genesis-contract` and `giltchain-site`). System toolchains below are already present in the VM snapshot; do not reinstall them in the update script.
+
+### Toolchain facts (already installed in snapshot)
+- Go 1.24.5 is installed at `/usr/local/go` and linked into `/usr/local/bin/go` (takes precedence over the system Go 1.22). `gilt-chain`, `bridge/gilt-exec`, and `bridge/gilt-consensus` require Go 1.24+.
+- Foundry (`forge`/`cast`/`anvil` 1.7.x) is installed at `~/.foundry/bin`; add it to PATH with `export PATH="$HOME/.foundry/bin:$PATH"` before running `forge`.
+- Not installed this session: Elixir/Erlang (needed for `scan/goldscan` Blockscout backend) and Docker (needed for the Docker-compose stacks and the `bridge/` Polygon-PoS/Heimdall+Bor chain).
+
+### L1 node (`gilt-chain`) — the core product
+- Build with the BLST portable flags or the build fails with `SIGILL in blst_cgo_init`:
+  `cd gilt-chain && CGO_CFLAGS="-O -D__BLST_PORTABLE__" CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__" make geth`. Binary lands at `gilt-chain/build/bin/geth`.
+- Lint: `make lint` (downloads golangci-lint 2.4.0 into `build/cache`). As of this setup the repo has 3 pre-existing lint findings (`consensus/parlia/parlia_test.go` copyloopvar, `core/txpool/legacypool/list.go` goimports, `cmd/faucet/faucet.go` govet) — these are not environment problems.
+- Tests: `make test` runs the full suite (`-timeout 1h`). For a fast check run a subset, e.g. `go test ./consensus/parlia/... ./common/... ./crypto/...`.
+
+### Running a local single-validator dev chain (no Docker needed)
+The self-contained harness under `gilt-chain/tests/truffle` boots a real Parlia chain without the Docker cluster:
+- Genesis: `gilt-chain/tests/truffle/storage/genesis.json` (chainId 714, single validator `0x03735c2ED70a56CD221e0024eB4bF90243C9d6E9`).
+- Keystores use an EMPTY password (start geth with `--password /dev/null`). The validator keystore is in `.../storage/keystore`; funded EOAs (each 500,000,000 GILT) are the `.../init-holders/*` keystores (e.g. `0x59b02d4d2f94ea5c55230715a58ebb0b703bcd4b`).
+- Boot: `geth --datadir <DD> init .../storage/genesis.json`, copy both keystore sets into `<DD>/keystore`, then run with `--mine --miner.etherbase 0x03735c2ED70a56CD221e0024eB4bF90243C9d6E9 --unlock <validator>,<init-holder> --password /dev/null --allow-insecure-unlock --nodiscover --http --http.api eth,net,web3,txpool,miner,parlia`. Blocks seal immediately; RPC is on `127.0.0.1:8545`.
+- The production genesis (`gilt-genesis-contract/genesis*.json`) uses validator `0x225D6AF0...` whose private key is NOT in the repo, so it cannot mine locally. Use the truffle harness validator for local dev instead.
+
+### System/genesis contracts (`gilt-genesis-contract`)
+- `forge-std` is vendored in `lib/`; OpenZeppelin comes from `npm install`. Build: `forge build` (needs `~/.foundry/bin` on PATH). Config sanity: `node scripts/validate-launch-config.js --profile testnet`.
+- `hardhat.config.ts` is empty on purpose — Foundry is the authoritative tool here.
+
+### Other components (not set up this session)
+- `scan/goldscan` (Elixir/Blockscout) and the `bridge/` Polygon-PoS stack + Docker-compose stacks need Elixir and Docker respectively.
+- `dex/pancake-frontend` and `scan/goldscan-frontend` are large pnpm/turbo workspaces; `giltchain-site` (Vite + React) is the lightweight site and is fully wired: `npm install` then `npm run dev` (served under base path `/giltchain/`) or `npm run build`.
