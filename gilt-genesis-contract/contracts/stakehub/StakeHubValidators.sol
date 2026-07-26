@@ -47,6 +47,9 @@ contract StakeHubValidators is StakeHubCommon {
     ) external payable onlyStakeHubDelegateCall whenNotPaused notInBlackList {
         // basic check
         address operatorAddress = msg.sender;
+        if (validatorAllowlistEnabled && !validatorAllowlist[operatorAddress]) {
+            revert NotOnValidatorAllowlist();
+        }
         if (_validatorSet.contains(operatorAddress)) revert ValidatorExisted();
         if (agentToOperator[operatorAddress] != address(0)) revert InvalidValidator();
 

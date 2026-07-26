@@ -1962,7 +1962,7 @@
     },
     {
       "abiFile": "stakehub.abi",
-      "abiSha256": "8c27b07de61b88e8bde5901c8dd35b2d5e7fcfd5b4ac6d59310079d5e2f146fe",
+      "abiSha256": "87b6d913f92a21cf17db6dd1e302cbc11327ed75773306fd16748fa2a3f5e1b7",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHub",
       "expectedCompilerVersion": "0.8.17",
@@ -2073,6 +2073,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -2135,6 +2139,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -2385,6 +2393,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -2869,6 +2885,14 @@
             "signature": "settleSlashReserve1155(address,uint256,uint256)"
           },
           {
+            "selector": "0xbbec326d",
+            "signature": "setValidatorAllowlist(address,bool)"
+          },
+          {
+            "selector": "0xffd1e82a",
+            "signature": "setValidatorAllowlistEnabled(bool)"
+          },
+          {
             "selector": "0x3a41440c",
             "signature": "slashReserveAmountById(uint256)"
           },
@@ -3025,6 +3049,14 @@
             "signature": "updateParam(string,bytes)"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -3041,7 +3073,7 @@
     },
     {
       "abiFile": "stakehubgiltstaking.abi",
-      "abiSha256": "85302121d2b75f85b2820fe7c2413beaec9a8eac1bc6e5fbdac5adf7e5601002",
+      "abiSha256": "77f038ed5c58eef6a8d0cfdb01f43c2bdbb814f263f8a957d685cc0601074023",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubGiltStaking",
       "expectedCompilerVersion": "0.8.17",
@@ -3152,6 +3184,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -3206,6 +3242,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -3456,6 +3496,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -3808,6 +3856,14 @@
             "signature": "undelegate(address,uint256)"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -3820,7 +3876,7 @@
     },
     {
       "abiFile": "stakehubgoldstaking.abi",
-      "abiSha256": "94b55dc4f6dbe4c0984835d87aed77c60b0087afe52e4d21b358e5885ff958be",
+      "abiSha256": "289104b08355cfceb6cb2dce65889f90a4efcbbb56b6373f2f4c5dcdb56e78a0",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubGoldStaking",
       "expectedCompilerVersion": "0.8.17",
@@ -3931,6 +3987,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -3985,6 +4045,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -4235,6 +4299,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -4631,6 +4703,14 @@
             "signature": "undelegateTokenB1155(address,uint256,uint256)"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -4643,7 +4723,7 @@
     },
     {
       "abiFile": "stakehubinflation.abi",
-      "abiSha256": "9ac1d2c2c7fb2271b021a187c377528f1d355c4563aa0aaf857b41f403afb4bb",
+      "abiSha256": "7a75fa16168f1ad8921e5a07894c3523b88b1f874809ac17f9ce4651fd383783",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubInflation",
       "expectedCompilerVersion": "0.8.17",
@@ -4754,6 +4834,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -4808,6 +4892,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -5058,6 +5146,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -5406,6 +5502,14 @@
             "signature": "unbondPeriod()"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -5418,7 +5522,7 @@
     },
     {
       "abiFile": "stakehubmigration.abi",
-      "abiSha256": "23b21a7488a32e4a6e78eda180b28e5e146e9a05edf6ebaab416aaa7caba94be",
+      "abiSha256": "e3bc7e387f7ab17cd15cbe9995b8aae9549d353fecc73420d631bfcf6d3db1d2",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubMigration",
       "expectedCompilerVersion": "0.8.17",
@@ -5529,6 +5633,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -5583,6 +5691,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -5833,6 +5945,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -6185,6 +6305,14 @@
             "signature": "unbondPeriod()"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -6201,7 +6329,7 @@
     },
     {
       "abiFile": "stakehubparams.abi",
-      "abiSha256": "9be456b3329a53c2ed8854ecdf22c41594eb823a8af21f24e19dd55d48ad384f",
+      "abiSha256": "dababf1cf7dfc661d9a7bd41ad012f2842ccc22a7494586fd6f15f3a6d845fe2",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubParams",
       "expectedCompilerVersion": "0.8.17",
@@ -6312,6 +6440,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -6366,6 +6498,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -6616,6 +6752,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -6868,6 +7012,14 @@
             "signature": "resume()"
           },
           {
+            "selector": "0xbbec326d",
+            "signature": "setValidatorAllowlist(address,bool)"
+          },
+          {
+            "selector": "0xffd1e82a",
+            "signature": "setValidatorAllowlistEnabled(bool)"
+          },
+          {
             "selector": "0x3a41440c",
             "signature": "slashReserveAmountById(uint256)"
           },
@@ -6952,6 +7104,14 @@
             "signature": "updateParam(string,bytes)"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -6964,7 +7124,7 @@
     },
     {
       "abiFile": "stakehubrewards.abi",
-      "abiSha256": "9fba58f55126c7eb320b15396b81c176fe746a4cfd99a65f156a1e3a2027fe3f",
+      "abiSha256": "fd4e957e1bcd49cdbe8a7eae2402414aefaf830618a8c15e2a4a5c04fee4f662",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubRewards",
       "expectedCompilerVersion": "0.8.17",
@@ -7075,6 +7235,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -7129,6 +7293,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -7379,6 +7547,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -7723,6 +7899,14 @@
             "signature": "unbondPeriod()"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -7735,7 +7919,7 @@
     },
     {
       "abiFile": "stakehubslashing.abi",
-      "abiSha256": "65d3a4a6ca840e23c6a01a3ce9aede7e21ca554c7c2ef54db920bfc683ca42a7",
+      "abiSha256": "1aad6ce37adcfd0522608f3eb3aa3f041460d4256a6d9d302ed882119627942d",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubSlashing",
       "expectedCompilerVersion": "0.8.17",
@@ -7846,6 +8030,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -7900,6 +8088,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -8150,6 +8342,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -8506,6 +8706,14 @@
             "signature": "unbondPeriod()"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -8518,7 +8726,7 @@
     },
     {
       "abiFile": "stakehubvalidators.abi",
-      "abiSha256": "e4cb1d7e186743e6af96a85c4a9891456e8acba88cd248cb31006e32e8ce8364",
+      "abiSha256": "148f7be3a0f6cab70cf4bf992e77d2fa60543a4f1e34a0af39071e48f7abc629",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubValidators",
       "expectedCompilerVersion": "0.8.17",
@@ -8629,6 +8837,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -8683,6 +8895,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -8933,6 +9149,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -9305,6 +9529,14 @@
             "signature": "updateAgent(address)"
           },
           {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
+          },
+          {
             "selector": "0xefdbf0e1",
             "signature": "voteExpiration(bytes)"
           },
@@ -9317,7 +9549,7 @@
     },
     {
       "abiFile": "stakehubvalidatorviews.abi",
-      "abiSha256": "a70bbb2c3c88fd150a04787dcdae2e262e56b702eedb28dd608566747ce80519",
+      "abiSha256": "e95ff5c8671af021d2338290ece76c0c7526336af31535f3aec20511be3a5ee2",
       "compilerVersion": "0.8.17+commit.8df45f5f",
       "contract": "StakeHubValidatorViews",
       "expectedCompilerVersion": "0.8.17",
@@ -9428,6 +9660,10 @@
             "signature": "NoMoreFelonyAllowed()"
           },
           {
+            "selector": "0xcc78ac3a",
+            "signature": "NotOnValidatorAllowlist()"
+          },
+          {
             "selector": "0x6cd60201",
             "signature": "NotPaused()"
           },
@@ -9482,6 +9718,10 @@
           {
             "selector": "0x3f259b7a",
             "signature": "UpdateTooFrequently()"
+          },
+          {
+            "selector": "0x9db9f5c7",
+            "signature": "ValidatorAllowlistAlreadyOpen()"
           },
           {
             "selector": "0x5f28f62b",
@@ -9732,6 +9972,14 @@
           {
             "signature": "UnexpectedPackage(uint8,bytes)",
             "topic": "0xaa5ba621c8b3d7d05bb9e51a7506108251d4d5dbe542ca66fc7bb52aacb02b65"
+          },
+          {
+            "signature": "ValidatorAllowlistModeUpdated(bool)",
+            "topic": "0x6c247aa21eef1b6484188c3f0384e143351e2b4f415cd35b0503620ddac1bb50"
+          },
+          {
+            "signature": "ValidatorAllowlistUpdated(address,bool)",
+            "topic": "0x853782d4089e02ed4519b481eabbfe1e27130adf02507f87e1c5f7956d27ab31"
           },
           {
             "signature": "ValidatorCreated(address,address,address,bytes)",
@@ -10114,6 +10362,14 @@
           {
             "selector": "0xfc0c5ff1",
             "signature": "unbondPeriod()"
+          },
+          {
+            "selector": "0xc750734b",
+            "signature": "validatorAllowlist(address)"
+          },
+          {
+            "selector": "0x72afd8aa",
+            "signature": "validatorAllowlistEnabled()"
           },
           {
             "selector": "0xefdbf0e1",

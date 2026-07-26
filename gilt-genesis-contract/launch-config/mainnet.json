@@ -57,6 +57,7 @@
     "goldRewardSource": "GILT_PLUS_FEES",
     "goldRewardSplitBps": 2000,
     "ratioEnabledAtLaunch": false,
+    "validatorAllowlistEnabled": true,
     "transferGasLimit": 5000,
     "minSelfDelegationGILTWei": "2000000000000000000000",
     "minDelegationGILTChangeWei": "1000000000000000000",
