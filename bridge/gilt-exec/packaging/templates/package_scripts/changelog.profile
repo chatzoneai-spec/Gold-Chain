@@ -1,3 +1,0 @@
-gilt-profile (2.10.11) unstable; urgency=low
-
--- Gilt Team <release-team@gilt.technology>  Mon, 10 Nov 2022 00:37:31 +0100

@@ -29,7 +29,6 @@ import (
 	v036params "github.com/giltchain/gilt-consensus/cmd/giltconsd/cmd/migration/params/v036"
 	"github.com/giltchain/gilt-consensus/cmd/giltconsd/cmd/migration/utils"
 	"github.com/giltchain/gilt-consensus/cmd/giltconsd/cmd/migration/verify"
-	milestoneTypes "github.com/giltchain/gilt-consensus/x/milestone/types"
 	pricefeedTypes "github.com/giltchain/gilt-consensus/x/pricefeed/types"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
 )
@@ -258,13 +257,6 @@ func performMigrations(genesisFileV1, chainId, genesisTime string, initialHeight
 	}
 	logger.Info(fmt.Sprintf("migrateClerkModule took %.2f minutes", time.Since(start).Minutes()))
 
-	// migrateGiltModule
-	start = time.Now()
-	if err := migrateGiltModule(genesisData); err != nil {
-		return nil, err
-	}
-	logger.Info(fmt.Sprintf("migrateGiltModule took %.2f minutes", time.Since(start).Minutes()))
-
 	// migrateCheckpointModule
 	start = time.Now()
 	if err := migrateCheckpointModule(genesisData); err != nil {
@@ -278,13 +270,6 @@ func performMigrations(genesisFileV1, chainId, genesisTime string, initialHeight
 		return nil, err
 	}
 	logger.Info(fmt.Sprintf("migrateTopupModule took %.2f minutes", time.Since(start).Minutes()))
-
-	// migrateMilestoneModule
-	start = time.Now()
-	if err := migrateMilestoneModule(genesisData); err != nil {
-		return nil, err
-	}
-	logger.Info(fmt.Sprintf("migrateMilestoneModule took %.2f minutes", time.Since(start).Minutes()))
 
 	// migrateChainManagerModule
 	start = time.Now()
@@ -575,77 +560,6 @@ func migrateChainManagerModule(genesisData map[string]interface{}, chainId strin
 	}
 
 	logger.Info("Chainmanager module migration completed successfully")
-
-	return nil
-}
-
-// migrateMilestoneModule adds genesis state for the milestone module because it's not exported from giltconsensus-v1.
-func migrateMilestoneModule(genesisData map[string]interface{}) error {
-	logger.Info("Migrating milestone module...")
-
-	checkpointModule, ok := genesisData["app_state"].(map[string]interface{})["checkpoint"]
-	if !ok {
-		return fmt.Errorf("checkpoint module not found in app_state")
-	}
-
-	checkpointData, ok := checkpointModule.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("failed to cast checkpoint module data")
-	}
-
-	milestones, milestonesFound := checkpointData["milestones"].([]interface{})
-	if milestonesFound {
-		utils.SortByTimestamp(milestones)
-
-		for i, milestone := range milestones {
-			milestoneMap, ok := milestone.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("invalid milestone format at index %d", i)
-			}
-
-			hashHex, ok := milestoneMap["hash"].(string)
-			if !ok {
-				return fmt.Errorf("hash not found in milestone at index %d", i)
-			}
-
-			if !strings.HasPrefix(hashHex, "0x") {
-				return fmt.Errorf("invalid hash format at index %d", i)
-			}
-
-			hashHex = hashHex[2:]
-
-			hashBytes, err := hex.DecodeString(hashHex)
-			if err != nil {
-				return fmt.Errorf("failed to decode hash at index %d: %w", i, err)
-			}
-
-			hashBase64 := base64.StdEncoding.EncodeToString(hashBytes)
-
-			milestoneMap["hash"] = hashBase64
-		}
-	}
-
-	if err := utils.DeleteProperty(genesisData, "app_state.checkpoint", "milestones"); err != nil {
-		return fmt.Errorf("failed to delete milestones from checkpoint module: %w", err)
-	}
-
-	genesisData["app_state"].(map[string]interface{})["milestone"] = map[string]interface{}{}
-
-	if !milestonesFound {
-		milestones = []interface{}{}
-	}
-
-	if err := utils.AddProperty(genesisData, "app_state.milestone", "milestones", milestones); err != nil {
-		return fmt.Errorf("failed to add milestones to milestone module: %w", err)
-	}
-
-	params := milestoneTypes.DefaultParams()
-
-	if err := utils.AddProperty(genesisData, "app_state.milestone", "params", params); err != nil {
-		return fmt.Errorf("failed to add params to milestone module: %w", err)
-	}
-
-	logger.Info("Milestone module migration completed successfully")
 
 	return nil
 }
@@ -1024,62 +938,6 @@ func migrateCheckpointModule(genesisData map[string]interface{}) error {
 	}
 
 	logger.Info("Checkpoint module migration completed successfully")
-
-	return nil
-}
-
-// migrateGiltModule will iterate over the spans to migrate all the validators and proposers.
-// It will also rename some fields to new names.
-func migrateGiltModule(genesisData map[string]interface{}) error {
-	logger.Info("Migrating gilt module...")
-
-	giltModule, ok := genesisData["app_state"].(map[string]interface{})["gilt"]
-	if !ok {
-		return fmt.Errorf("gilt module not found in app_state")
-	}
-
-	giltData, ok := giltModule.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("failed to cast gilt module data")
-	}
-
-	spans, ok := giltData["spans"].([]interface{})
-	if !ok {
-		return fmt.Errorf("failed to find spans in gilt module")
-	}
-
-	for _, span := range spans {
-		spanMap, ok := span.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("failed to cast span data")
-		}
-
-		if err := utils.RenameProperty(spanMap, ".", "span_id", "id"); err != nil {
-			return fmt.Errorf("failed to rename gilt_chain_id field: %w", err)
-		}
-
-		if err := utils.MigrateValidators(spanMap["selected_producers"]); err != nil {
-			return fmt.Errorf("failed to migrate selected_producers in span: %w", err)
-		}
-
-		validatorSet, ok := spanMap["validator_set"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("failed to find validator_set in span")
-		}
-
-		proposer, _ := validatorSet["proposer"].(map[string]interface{})
-		if proposer != nil {
-			if err := utils.MigrateValidator(proposer); err != nil {
-				return fmt.Errorf("failed to migrate proposer: %w", err)
-			}
-		}
-
-		if err := utils.MigrateValidators(validatorSet["validators"]); err != nil {
-			return fmt.Errorf("failed to migrate validators in validator_set: %w", err)
-		}
-	}
-
-	logger.Info("Gilt module migration completed successfully")
 
 	return nil
 }

@@ -2,6 +2,7 @@ pragma solidity 0.5.17;
 
 import {IGiltMigration} from "../../common/misc/IGiltMigration.sol";
 import {IERC20} from "../../common/oz/token/ERC20/IERC20.sol";
+import {IValidatorSetCommitment} from "../IValidatorSetCommitment.sol";
 
 contract StakeManagerStorageExtension {
     address public eventsHub;
@@ -20,4 +21,5 @@ contract StakeManagerStorageExtension {
 
     IERC20 public tokenLegacyToken;
     IGiltMigration public migration;
+    IValidatorSetCommitment public validatorSetCommitment;
 }

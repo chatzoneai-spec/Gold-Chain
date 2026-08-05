@@ -3,14 +3,12 @@ package giltconsensusv2.sidetxs;
 
 import "amino/amino.proto";
 import "gogoproto/gogo.proto";
-import "giltconsensusv2/milestone/milestone.proto";
 
 option go_package = "github.com/giltchain/gilt-consensus/sidetxs";
 
 // VoteExtension contains additional data included by validators in their votes.
 // Introduced in ABCI++, vote extensions allow validators to include
-// supplementary information like milestone propositions and side transaction
-// results.
+// supplementary information like side transaction results.
 message VoteExtension {
   // Hash of the block this vote extension is for.
   bytes block_hash = 1 [ (amino.dont_omitempty) = true ];
@@ -19,9 +17,6 @@ message VoteExtension {
   // Results of side transaction validation by this validator.
   repeated SideTxResponse side_tx_responses = 3
       [ (amino.dont_omitempty) = true, (gogoproto.nullable) = false ];
-  // Milestone proposition submitted by this validator.
-  giltconsensusv2.milestone.MilestoneProposition milestone_proposition = 4
-      [ (amino.dont_omitempty) = true ];
 }
 
 // SideTxResponse contains a validator's vote on a side transaction.

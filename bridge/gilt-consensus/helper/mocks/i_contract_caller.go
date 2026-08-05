@@ -426,54 +426,6 @@ func (_m *IContractCaller) GetGiltChainBlockAuthor(_a0 *big.Int) (*common.Addres
 	return r0, r1
 }
 
-// GetGiltChainBlockInfoInBatch provides a mock function with given fields: ctx, start, end
-func (_m *IContractCaller) GetGiltChainBlockInfoInBatch(ctx context.Context, start int64, end int64) ([]*types.Header, []uint64, []common.Address, error) {
-	ret := _m.Called(ctx, start, end)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetGiltChainBlockInfoInBatch")
-	}
-
-	var r0 []*types.Header
-	var r1 []uint64
-	var r2 []common.Address
-	var r3 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) ([]*types.Header, []uint64, []common.Address, error)); ok {
-		return rf(ctx, start, end)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) []*types.Header); ok {
-		r0 = rf(ctx, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.Header)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) []uint64); ok {
-		r1 = rf(ctx, start, end)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]uint64)
-		}
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, int64, int64) []common.Address); ok {
-		r2 = rf(ctx, start, end)
-	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]common.Address)
-		}
-	}
-
-	if rf, ok := ret.Get(3).(func(context.Context, int64, int64) error); ok {
-		r3 = rf(ctx, start, end)
-	} else {
-		r3 = ret.Error(3)
-	}
-
-	return r0, r1, r2, r3
-}
-
 // GetGiltChainBlockTd provides a mock function with given fields: ctx, blockHash
 func (_m *IContractCaller) GetGiltChainBlockTd(ctx context.Context, blockHash common.Hash) (uint64, error) {
 	ret := _m.Called(ctx, blockHash)
@@ -1007,34 +959,6 @@ func (_m *IContractCaller) GetValidatorSetInstance(validatorSetAddress string) (
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
 		r1 = rf(validatorSetAddress)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetVoteOnHash provides a mock function with given fields: start, end, hash, milestoneID
-func (_m *IContractCaller) GetVoteOnHash(start uint64, end uint64, hash string, milestoneID string) (bool, error) {
-	ret := _m.Called(start, end, hash, milestoneID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetVoteOnHash")
-	}
-
-	var r0 bool
-	var r1 error
-	if rf, ok := ret.Get(0).(func(uint64, uint64, string, string) (bool, error)); ok {
-		return rf(start, end, hash, milestoneID)
-	}
-	if rf, ok := ret.Get(0).(func(uint64, uint64, string, string) bool); ok {
-		r0 = rf(start, end, hash, milestoneID)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	if rf, ok := ret.Get(1).(func(uint64, uint64, string, string) error); ok {
-		r1 = rf(start, end, hash, milestoneID)
 	} else {
 		r1 = ret.Error(1)
 	}

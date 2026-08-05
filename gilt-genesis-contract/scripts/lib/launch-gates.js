@@ -13,7 +13,6 @@ const OLD_BSC_BRIDGE_MACHINERY = Object.freeze([
   "CrossChain",
   "Staking",
   "TokenRecoverPortal",
-  "StateReceiver",
   "NativeGiltBridge",
 ]);
 

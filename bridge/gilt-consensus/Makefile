@@ -128,7 +128,6 @@ proto-swagger-gen:
 
 mock:
 	go install github.com/golang/mock/mockgen@latest
-	mockgen -source=x/gilt/types/expected_keepers.go -destination=x/gilt/testutil/expected_keepers_mocks.go  -package=testutil
 	mockgen -source=x/checkpoint/types/expected_keepers.go -destination=x/checkpoint/testutil/expected_keepers_mocks.go -package=testutil
 	mockgen -source=x/clerk/types/expected_keepers.go -destination=x/clerk/testutil/expected_keepers_mocks.go -package=testutil
 	mockgen -source=x/stake/types/expected_keepers.go -destination=x/stake/testutil/expected_keepers_mocks.go -package=testutil

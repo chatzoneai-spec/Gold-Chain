@@ -12,14 +12,13 @@ const (
 	"height": "0",
 	"result": {
 			"chain_params": {
-			"gilt_chain_id": "80001",
-			"giltconsensus_chain_id": "giltconsensus-80001",
+			"gilt_chain_id": "714",
+			"giltconsensus_chain_id": "giltconsensus-714",
 			"slash_manager_address": "0x93D8f8A1A88498b258ceb69dD82311962374269C",
 			"root_chain_address": "0x2890bA17EfE978480615e330ecB65333b880928e",
 			"staking_info_address": "0x318EeD65F064904Bc6E0e3842940c5972BC8E38f",
 			"state_sender_address": "0xEAa852323826C71cd7920C3b4c007184234c3945",
-			"state_receiver_address": "0x0000000000000000000000000000000000001001",
-			"validator_set_address": "0x0000000000000000000000000000000000001000"
+			"state_receiver_address": "0x0000000000000000000000000000000000003001"
 			},
 		"main_chain_tx_confirmations": "6",
 		"gilt_chain_tx_confirmations": "10"

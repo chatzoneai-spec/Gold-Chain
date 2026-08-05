@@ -310,7 +310,7 @@ replace (
 	github.com/cometbft/cometbft => ./.deps/cometbft
 	github.com/cometbft/cometbft-db => ./.deps/cometbft-db
 	github.com/cosmos/cosmos-sdk => ./.deps/cosmos-sdk
-	github.com/ethereum/go-ethereum => ../gilt-exec
+	github.com/ethereum/go-ethereum => ../../gilt-chain
 	// Following version of goleveldb might cause an unexpected behavior.
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	nhooyr.io/websocket => github.com/coder/websocket v1.8.7

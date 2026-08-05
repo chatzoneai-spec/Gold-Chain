@@ -68,7 +68,6 @@ const (
 
 	// Vote extension errors
 
-	ErrAlertVoteExtensionRejected                     = "alert, vote extension rejected. This should not happen; the validator could be malicious!"
-	ErrAlertNonRpVoteExtensionRejected                = "alert, non-rp vote extension rejected. This should not happen; the validator could be malicious!"
-	ErrAlertMilestonePropositionVoteExtensionRejected = "alert, milestone proposition vote extension rejected. This should not happen; the validator could be malicious!"
+	ErrAlertVoteExtensionRejected      = "alert, vote extension rejected. This should not happen; the validator could be malicious!"
+	ErrAlertNonRpVoteExtensionRejected = "alert, non-rp vote extension rejected. This should not happen; the validator could be malicious!"
 )

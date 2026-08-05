@@ -40,7 +40,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -86,12 +85,6 @@ import (
 	"github.com/giltchain/gilt-consensus/x/clerk"
 	clerkkeeper "github.com/giltchain/gilt-consensus/x/clerk/keeper"
 	clerktypes "github.com/giltchain/gilt-consensus/x/clerk/types"
-	"github.com/giltchain/gilt-consensus/x/gilt"
-	giltKeeper "github.com/giltchain/gilt-consensus/x/gilt/keeper"
-	giltTypes "github.com/giltchain/gilt-consensus/x/gilt/types"
-	"github.com/giltchain/gilt-consensus/x/milestone"
-	milestoneKeeper "github.com/giltchain/gilt-consensus/x/milestone/keeper"
-	milestoneTypes "github.com/giltchain/gilt-consensus/x/milestone/types"
 	"github.com/giltchain/gilt-consensus/x/pricefeed"
 	pricefeedKeeper "github.com/giltchain/gilt-consensus/x/pricefeed/keeper"
 	pricefeedTypes "github.com/giltchain/gilt-consensus/x/pricefeed/types"
@@ -152,8 +145,6 @@ type GiltConsensusApp struct {
 	TopupKeeper        topupKeeper.Keeper
 	ChainManagerKeeper chainmanagerkeeper.Keeper
 	CheckpointKeeper   checkpointKeeper.Keeper
-	MilestoneKeeper    milestoneKeeper.Keeper
-	GiltKeeper         giltKeeper.Keeper
 	PriceFeedKeeper    pricefeedKeeper.Keeper
 
 	// utility for invoking contracts in the Ethereum and Gilt chains
@@ -220,8 +211,6 @@ func NewGiltConsensusApp(
 		checkpointTypes.StoreKey,
 		topupTypes.StoreKey,
 		chainmanagertypes.StoreKey,
-		milestoneTypes.StoreKey,
-		giltTypes.StoreKey,
 		pricefeedTypes.StoreKey,
 	)
 
@@ -346,23 +335,6 @@ func NewGiltConsensusApp(
 		app.caller,
 	)
 
-	app.MilestoneKeeper = milestoneKeeper.NewKeeper(
-		appCodec,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		runtime.NewKVStoreService(keys[milestoneTypes.StoreKey]),
-		app.caller,
-	)
-
-	app.GiltKeeper = giltKeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[giltTypes.StoreKey]),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		&app.ChainManagerKeeper,
-		&app.StakeKeeper,
-		&app.MilestoneKeeper,
-		app.caller,
-	)
-
 	// HV2: stake and checkpoint keepers are circularly dependent. This workaround solves it
 	app.StakeKeeper.SetPricefeedKeeper(app.PriceFeedKeeper)
 	app.StakeKeeper.SetCheckpointKeeper(app.CheckpointKeeper)
@@ -377,8 +349,6 @@ func NewGiltConsensusApp(
 		chainmanager.NewAppModule(app.ChainManagerKeeper),
 		topup.NewAppModule(app.TopupKeeper, app.caller),
 		checkpoint.NewAppModule(&app.CheckpointKeeper),
-		milestone.NewAppModule(&app.MilestoneKeeper),
-		gilt.NewAppModule(app.GiltKeeper, app.caller),
 		params.NewAppModule(app.ParamsKeeper),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 	)
@@ -421,8 +391,6 @@ func NewGiltConsensusApp(
 		pricefeedTypes.ModuleName,
 		staketypes.ModuleName,
 		checkpointTypes.ModuleName,
-		milestoneTypes.ModuleName,
-		giltTypes.ModuleName,
 		clerktypes.ModuleName,
 		topupTypes.ModuleName,
 		paramstypes.ModuleName,
@@ -502,45 +470,6 @@ func NewGiltConsensusApp(
 }
 
 func (app *GiltConsensusApp) CheckTx(req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
-	// Only apply veBlop validation during normal CheckTx (not recheck)
-	if req.Type == abci.CheckTxType_New {
-		tx, err := app.TxDecode(req.Tx)
-		if err != nil {
-			return &abci.ResponseCheckTx{
-				Code: sdkerrors.ErrTxDecode.ABCICode(),
-				Log:  fmt.Sprintf("failed to decode transaction: %v", err),
-			}, nil
-		}
-
-		msgs := tx.GetMsgs()
-		for _, msg := range msgs {
-			// Check for MsgVoteProducers and apply VEBLOP validation
-			if _, ok := msg.(*giltTypes.MsgVoteProducers); ok {
-				// Create a context for validation
-				ctx := app.NewUncachedContext(true, cmtproto.Header{})
-
-				// Validate veBlop phase using common function
-				if err := app.GiltKeeper.CanVoteProducers(ctx); err != nil {
-					app.Logger().Debug("Rejecting MsgVoteProducers in CheckTx", "error", err)
-					return &abci.ResponseCheckTx{
-						Code: sdkerrors.ErrInvalidRequest.ABCICode(),
-						Log:  err.Error(),
-					}, nil
-				}
-			} else if _, ok := msg.(*giltTypes.MsgSetProducerDowntime); ok {
-				// Create a context for validation
-				ctx := app.NewUncachedContext(true, cmtproto.Header{Height: app.LastBlockHeight() + 1})
-				if err := app.GiltKeeper.CanSetProducerDowntime(ctx); err != nil {
-					app.Logger().Debug("Rejecting MsgSetProducerDowntime in CheckTx", "error", err)
-					return &abci.ResponseCheckTx{
-						Code: sdkerrors.ErrInvalidRequest.ABCICode(),
-						Log:  err.Error(),
-					}, nil
-				}
-			}
-		}
-	}
-
 	return app.BaseApp.CheckTx(req)
 }
 
@@ -1058,11 +987,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
 	paramsKeeper.Subspace(govtypes.ModuleName)
-	paramsKeeper.Subspace(giltTypes.ModuleName)
 	paramsKeeper.Subspace(chainmanagertypes.ModuleName)
 	paramsKeeper.Subspace(checkpointTypes.ModuleName)
 	paramsKeeper.Subspace(clerktypes.ModuleName)
-	paramsKeeper.Subspace(milestoneTypes.ModuleName)
 	paramsKeeper.Subspace(staketypes.ModuleName)
 	paramsKeeper.Subspace(topupTypes.ModuleName)
 

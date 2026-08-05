@@ -15,8 +15,7 @@ const (
 	MinMainChainTxConfirmations     uint64 = 6
 	MinGiltChainTxConfirmations     uint64 = 10
 
-	DefaultStateReceiverAddress = "0x0000000000000000000000000000000000001001"
-	DefaultValidatorSetAddress  = "0x0000000000000000000000000000000000001000"
+	DefaultStateReceiverAddress = "0x0000000000000000000000000000000000003001"
 	DefaultSlashManagerAddress  = "0x0000000000000000000000000000000000000000"
 	DefaultRootChainAddress     = "0x0000000000000000000000000000000000000000"
 	DefaultStakingInfoAddress   = "0x0000000000000000000000000000000000000000"
@@ -36,7 +35,6 @@ func DefaultParams() Params {
 			StakingInfoAddress:   DefaultStakingInfoAddress,
 			StateSenderAddress:   DefaultStateSenderAddress,
 			StateReceiverAddress: DefaultStateReceiverAddress,
-			ValidatorSetAddress:  DefaultValidatorSetAddress,
 		},
 	}
 }
@@ -85,10 +83,6 @@ func (p Params) ValidateBasic() error {
 	}
 
 	if err := validateGiltConsensusAddress("state_receiver_address", p.ChainParams.StateReceiverAddress); err != nil {
-		return err
-	}
-
-	if err := validateGiltConsensusAddress("validator_set_address", p.ChainParams.ValidatorSetAddress); err != nil {
 		return err
 	}
 

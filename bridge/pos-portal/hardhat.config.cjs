@@ -52,7 +52,7 @@ module.exports = {
       },
     },
     testnetRoot: {
-      url: `https://goerli.infura.io/v3/${process.env.API_KEY}`,
+      url: `https://sepolia.infura.io/v3/${process.env.API_KEY}`,
       gas: 7000000,
       gasPrice: 10000000000, // 10 gwei
       accounts: {

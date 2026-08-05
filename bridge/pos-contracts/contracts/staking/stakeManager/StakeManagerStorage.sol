@@ -7,6 +7,7 @@ import {RootChainable} from "../../common/mixin/RootChainable.sol";
 import {StakingInfo} from "../StakingInfo.sol";
 import {StakingNFT} from "./StakingNFT.sol";
 import {ValidatorShareFactory} from "../validatorShare/ValidatorShareFactory.sol";
+import {IValidatorSetCommitment} from "../IValidatorSetCommitment.sol";
 
 contract StakeManagerStorage is GovernanceLockable, RootChainable {
     enum Status {
@@ -97,4 +98,5 @@ contract StakeManagerStorage is GovernanceLockable, RootChainable {
     mapping(uint256 => uint256) public latestSignerUpdateEpoch;
 
     uint256 public totalGiltConsensusFee;
+    IValidatorSetCommitment public validatorSetCommitment;
 }

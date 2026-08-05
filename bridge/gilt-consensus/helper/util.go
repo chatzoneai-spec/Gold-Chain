@@ -25,8 +25,8 @@ import (
 
 const (
 	APIBodyLimit              = 128 * 1024 * 1024 // 128 MB
-	mainnetChainID            = "giltconsensusv2-137"
-	gilttestnetChainID               = "giltconsensusv2-80002"
+	mainnetChainID     = "giltconsensus-714"
+	gilttestnetChainID = "giltconsensus-715"
 	mainnetInitialBlockHeight = 24404501
 	gilttestnetInitialBlockHeight    = 8788501
 	devnetInitialBlockHeight  = 0

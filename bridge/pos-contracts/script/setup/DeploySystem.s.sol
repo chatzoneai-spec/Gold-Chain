@@ -49,7 +49,13 @@ import {ArtifactPath} from "./ArtifactPath.sol";
 
 import "forge-std/Script.sol";
 
+interface IChainIdMixin {
+    function CHAINID() external view returns (uint256);
+}
+
 contract DeploySystem is Script, ArtifactPath {
+    uint256 internal constant GOLD_CHAIN_ID = 714;
+
     Governance governance;
     StakeManager stakeManager;
     Registry registry;
@@ -59,7 +65,7 @@ contract DeploySystem is Script, ArtifactPath {
     StakingInfo stakingInfo;
     EventsHub eventsHub;
     RootChain rootChain;
-    address owner = makeAddr("owner");
+    address owner;
     uint256 defaultStakeVS = 1000 * 10 ** 18;
 
     address governanceProxy;
@@ -70,6 +76,9 @@ contract DeploySystem is Script, ArtifactPath {
     function run() public {}
 
     function deployAll() public {
+        owner = vm.envAddress("GOVERNANCE_MULTISIG");
+        require(owner != address(0), "GOVERNANCE_MULTISIG not set");
+
         address governanceImpl = deployCode(GovernancePath);
         // Owner is msg.sender
         governanceProxy = deployCode(GovernanceProxyPath, abi.encode(governanceImpl));
@@ -103,6 +112,7 @@ contract DeploySystem is Script, ArtifactPath {
 
         address rootChainImpl = deployCode(RootChainPath);
         rootChain = RootChain(deployCode(RootChainProxyPath, abi.encode(rootChainImpl, registry, "giltconsensus-P5rXwg")));
+        require(IChainIdMixin(address(rootChain)).CHAINID() == GOLD_CHAIN_ID, "ChainIdMixin CHAINID must be 714");
 
         address stakeManagerImpl = deployCode(StakeManagerPath);
         address stakeManagerProxy = deployCode(StakeManagerProxyPath, abi.encode(address(0)));
@@ -126,7 +136,8 @@ contract DeploySystem is Script, ArtifactPath {
                         owner,
                         stakeManagerExtension,
                         address(polToken),
-                        address(giltMigration)
+                        address(giltMigration),
+                        address(0)
                     )
                 )
             );
@@ -182,9 +193,9 @@ contract DeploySystem is Script, ArtifactPath {
         stakeManager.stakeForPOL(_validator.addr, defaultStakeVS, giltconsensusFee, true, _validator.pubKey);
     }
 
-    function removeValidator(uint8 _id) public {
-        vm.prank(address(governance));
-        stakeManager.forceUnstakePOL(_id);
+    function removeValidator(uint8 _id, Validator memory _validator) public {
+        vm.prank(_validator.addr);
+        stakeManager.unstakePOL(_id);
     }
 
     function skipFoundationValidators() public {
@@ -192,7 +203,7 @@ contract DeploySystem is Script, ArtifactPath {
         for (uint8 id = 1; id < 8; id++) {
             Validator memory currentVal = createValidator(id);
             addValidator(currentVal);
-            removeValidator(id);
+            removeValidator(id, currentVal);
         }
     }
 

@@ -40,8 +40,6 @@ type ChainParams struct {
 	StateSenderAddress string `protobuf:"bytes,8,opt,name=state_sender_address,json=stateSenderAddress,proto3" json:"state_sender_address,omitempty"`
 	// Address of the state receiver contract on the Gilt chain.
 	StateReceiverAddress string `protobuf:"bytes,9,opt,name=state_receiver_address,json=stateReceiverAddress,proto3" json:"state_receiver_address,omitempty"`
-	// Address of the validator set contract on the root chain.
-	ValidatorSetAddress string `protobuf:"bytes,10,opt,name=validator_set_address,json=validatorSetAddress,proto3" json:"validator_set_address,omitempty"`
 }
 
 func (m *ChainParams) Reset()         { *m = ChainParams{} }
@@ -122,13 +120,6 @@ func (m *ChainParams) GetStateSenderAddress() string {
 func (m *ChainParams) GetStateReceiverAddress() string {
 	if m != nil {
 		return m.StateReceiverAddress
-	}
-	return ""
-}
-
-func (m *ChainParams) GetValidatorSetAddress() string {
-	if m != nil {
-		return m.ValidatorSetAddress
 	}
 	return ""
 }
@@ -281,9 +272,6 @@ func (this *ChainParams) Equal(that interface{}) bool {
 	if this.StateReceiverAddress != that1.StateReceiverAddress {
 		return false
 	}
-	if this.ValidatorSetAddress != that1.ValidatorSetAddress {
-		return false
-	}
 	return true
 }
 func (this *Params) Equal(that interface{}) bool {
@@ -336,13 +324,6 @@ func (m *ChainParams) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.ValidatorSetAddress) > 0 {
-		i -= len(m.ValidatorSetAddress)
-		copy(dAtA[i:], m.ValidatorSetAddress)
-		i = encodeVarintChainmanager(dAtA, i, uint64(len(m.ValidatorSetAddress)))
-		i--
-		dAtA[i] = 0x52
-	}
 	if len(m.StateReceiverAddress) > 0 {
 		i -= len(m.StateReceiverAddress)
 		copy(dAtA[i:], m.StateReceiverAddress)
@@ -480,10 +461,6 @@ func (m *ChainParams) Size() (n int) {
 		n += 1 + l + sovChainmanager(uint64(l))
 	}
 	l = len(m.StateReceiverAddress)
-	if l > 0 {
-		n += 1 + l + sovChainmanager(uint64(l))
-	}
-	l = len(m.ValidatorSetAddress)
 	if l > 0 {
 		n += 1 + l + sovChainmanager(uint64(l))
 	}
@@ -765,38 +742,6 @@ func (m *ChainParams) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.StateReceiverAddress = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 10:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValidatorSetAddress", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowChainmanager
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthChainmanager
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthChainmanager
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ValidatorSetAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

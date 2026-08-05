@@ -13,8 +13,6 @@ contract RootChainHeader {
         uint256 end,
         bytes32 root
     );
-    // housekeeping event
-    event ResetHeaderBlock(address indexed proposer, uint256 indexed headerBlockId);
 
     struct HeaderBlock {
         bytes32 root;

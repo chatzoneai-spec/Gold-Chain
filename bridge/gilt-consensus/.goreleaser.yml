@@ -100,14 +100,8 @@ nfpms:
       - src: builder/files/giltconsensusd.service
         dst: /lib/systemd/system/giltconsensusd.service
         type: config
-      - src: builder/files/genesis-mainnet-v1.json
-        dst: /etc/giltconsensus/genesis-mainnet-v1.json
-        type: config
-      - src: builder/files/genesis-testnet-v4.json
-        dst: /etc/giltconsensus/genesis-testnet-v4.json
-        type: config
-      - src: builder/files/genesis-gilttestnet-v1.json
-        dst: /etc/giltconsensus/genesis-gilttestnet-v1.json
+      - src: builder/files/genesis-goldchain-714.json
+        dst: /etc/giltconsensus/genesis-goldchain-714.json
         type: config
       - dst: /var/lib/giltconsensus
         type: dir
@@ -132,9 +126,7 @@ dockers:
       - --platform=linux/amd64
     extra_files:
       - docker/entrypoint.sh
-      - builder/files/genesis-mainnet-v1.json
-      - builder/files/genesis-testnet-v4.json
-      - builder/files/genesis-gilttestnet-v1.json
+      - builder/files/genesis-goldchain-714.json
 
   - image_templates:
       - 0xgilt/{{ .ProjectName }}:{{ .Version }}-arm64
@@ -147,9 +139,7 @@ dockers:
       - --platform=linux/arm64/v8
     extra_files:
       - docker/entrypoint.sh
-      - builder/files/genesis-mainnet-v1.json
-      - builder/files/genesis-testnet-v4.json
-      - builder/files/genesis-gilttestnet-v1.json
+      - builder/files/genesis-goldchain-714.json
 
 docker_manifests:
   - name_template: 0xgilt/{{ .ProjectName }}:{{ .Version }}

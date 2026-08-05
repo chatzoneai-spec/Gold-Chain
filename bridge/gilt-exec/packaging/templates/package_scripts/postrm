@@ -1,6 +1,0 @@
-#!/bin/bash
-#
-###############
-# Remove gilt installs
-##############
-sudo systemctl daemon-reload

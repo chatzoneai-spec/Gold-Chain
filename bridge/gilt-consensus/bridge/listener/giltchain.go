@@ -2,6 +2,7 @@ package listener
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/RichardKnop/machinery/v1/tasks"
@@ -29,13 +30,38 @@ func (ml *GiltChainListener) Start() error {
 	// start the header process
 	go ml.StartHeaderProcess(headerCtx)
 
-	// start go routine to poll for the new header using the client object
-	ml.Logger.Info("GiltChainListener: start polling for header blocks", "pollInterval", helper.GetConfig().CheckpointPollInterval)
+	// start go routine to poll for the Parlia finalized header using the client object
+	ml.Logger.Info("GiltChainListener: start polling for Parlia finalized header blocks", "pollInterval", helper.GetConfig().CheckpointPollInterval)
 
-	// start polling for the latest block in the gilt child chain (replace with finalized block once we have it implemented)
 	go ml.StartPolling(ctx, helper.GetConfig().CheckpointPollInterval, nil)
 
 	return nil
+}
+
+// StartPolling polls the Parlia finalized head; non-finalized tips are not checkpoint-eligible.
+func (ml *GiltChainListener) StartPolling(ctx context.Context, pollInterval time.Duration, _ *big.Int) {
+	ticker := time.NewTicker(pollInterval)
+
+	for {
+		select {
+		case <-ticker.C:
+			header, err := ml.contractCaller.GetGiltChainFinalizedBlock(ctx)
+			if err != nil {
+				ml.Logger.Error("GiltChainListener: error fetching Parlia finalized header", "err", err)
+				continue
+			}
+			if header == nil {
+				continue
+			}
+
+			ml.HeaderChannel <- &blockHeader{header: header, isFinalized: true}
+		case <-ctx.Done():
+			ml.Logger.Info("GiltChainListener: polling stopped")
+			ticker.Stop()
+
+			return
+		}
+	}
 }
 
 // ProcessHeader - process header block from the gilt chain

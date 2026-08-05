@@ -25,7 +25,6 @@ import (
 
 	cmdhelper "github.com/giltchain/gilt-consensus/cmd"
 	hmTypes "github.com/giltchain/gilt-consensus/types"
-	giltTypes "github.com/giltchain/gilt-consensus/x/gilt/types"
 	pricefeedTypes "github.com/giltchain/gilt-consensus/x/pricefeed/types"
 	stakingcli "github.com/giltchain/gilt-consensus/x/stake/client/cli"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
@@ -263,12 +262,6 @@ testnet --v 4 --n 8 --output-dir ./output --starting-ip-address 192.168.10.2
 			appGenState[stakeTypes.ModuleName] = cliCdc.MustMarshalJSON(stakeGenesis)
 
 			appGenState, err = stakeTypes.SetGenesisStateToAppState(cliCdc, appGenState, validators, *validatorSet)
-			if err != nil {
-				return err
-			}
-
-			// set gilt genesis state
-			appGenState, err = giltTypes.SetGenesisStateToAppState(cliCdc, appGenState, *validatorSet)
 			if err != nil {
 				return err
 			}

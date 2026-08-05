@@ -23,8 +23,15 @@ contract System {
     address public constant TIMELOCK_ADDR = 0x0000000000000000000000000000000000002006;
     address internal constant GENERAL_NATIVE_TOKEN_MANAGER_ADDR = 0x0000000000000000000000000000000000002007;
     address internal constant TOKEN_RECOVER_PORTAL_ADDR = 0x0000000000000000000000000000000000003000;
-    address internal constant STATE_RECEIVER_ADDR = 0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE;
+    address internal constant STATE_RECEIVER_ADDR = 0x0000000000000000000000000000000000003001;
     address internal constant NATIVE_GILT_BRIDGE_ADDR = 0x0000000000000000000000000000000000003002;
+
+    address public constant SYSTEM_ADDRESS = 0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE;
+
+    modifier onlySystem() {
+        require(msg.sender == SYSTEM_ADDRESS, "Not System Address!");
+        _;
+    }
 
     modifier onlyCoinbase() {
         require(msg.sender == block.coinbase, "the message sender must be the block producer");

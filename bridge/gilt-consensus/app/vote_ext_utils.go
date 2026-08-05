@@ -26,8 +26,6 @@ import (
 	chainManagerKeeper "github.com/giltchain/gilt-consensus/x/chainmanager/keeper"
 	checkpointKeeper "github.com/giltchain/gilt-consensus/x/checkpoint/keeper"
 	checkpointTypes "github.com/giltchain/gilt-consensus/x/checkpoint/types"
-	milestoneAbci "github.com/giltchain/gilt-consensus/x/milestone/abci"
-	milestoneKeeper "github.com/giltchain/gilt-consensus/x/milestone/keeper"
 	stakeKeeper "github.com/giltchain/gilt-consensus/x/stake/keeper"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
 )
@@ -46,7 +44,7 @@ const (
 // It checks the signature of each vote extension with its signer's public key
 // Also, it checks if the vote extensions are enabled, valid, and have >2/3 voting power.
 // It returns an error in case the validation fails
-func ValidateVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTypes.ExtendedVoteInfo, round int32, validatorSet *stakeTypes.ValidatorSet, milestoneKeeper milestoneKeeper.Keeper) error {
+func ValidateVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTypes.ExtendedVoteInfo, round int32, validatorSet *stakeTypes.ValidatorSet) error {
 	// check if VEs are enabled
 	if err := checkIfVoteExtensionsDisabled(ctx, reqHeight+1); err != nil {
 		return err
@@ -119,10 +117,6 @@ func ValidateVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abci
 			return fmt.Errorf("invalid sideTxResponses detected for validator %s and tx %s, error: %w", valAddrStr, common.Bytes2Hex(txHash), err)
 		}
 
-		if err := milestoneAbci.ValidateMilestoneProposition(ctx, &milestoneKeeper, voteExtension.MilestoneProposition); err != nil {
-			return fmt.Errorf("invalid milestone proposition detected for validator %s, error: %w", valAddrStr, err)
-		}
-
 		// Check for duplicate votes by the same validator
 		if _, found := seenValidators[valAddrStr]; found {
 			return fmt.Errorf("duplicate vote detected from validator %s at height %d", valAddrStr, reqHeight)
@@ -132,7 +126,7 @@ func ValidateVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abci
 
 		_, validator := validatorSet.GetByAddress(valAddrStr)
 		if validator == nil {
-			if milestoneAbci.ShouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
+			if shouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
 				return errors.New(helper.ErrFailedToGetValidator(valAddrStr))
 			}
 			continue
@@ -192,7 +186,7 @@ func ValidateVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abci
 }
 
 // FilterVoteExtensions verifies the vote extension correctness and filters out invalid ones
-func FilterVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTypes.ExtendedVoteInfo, round int32, validatorSet *stakeTypes.ValidatorSet, milestoneKeeper milestoneKeeper.Keeper, logger log.Logger) ([]abciTypes.ExtendedVoteInfo, error) {
+func FilterVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTypes.ExtendedVoteInfo, round int32, validatorSet *stakeTypes.ValidatorSet, logger log.Logger) ([]abciTypes.ExtendedVoteInfo, error) {
 	validVoteExtensions := make([]abciTypes.ExtendedVoteInfo, 0)
 
 	// check if VEs are enabled
@@ -263,11 +257,6 @@ func FilterVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTy
 			continue
 		}
 
-		if err := milestoneAbci.ValidateMilestoneProposition(ctx, &milestoneKeeper, voteExtension.MilestoneProposition); err != nil {
-			logger.Error("Invalid milestone proposition detected for validator", "validator", valAddrStr, "error", err)
-			continue
-		}
-
 		// Check for duplicate votes by the same validator
 		if _, found := seenValidators[valAddrStr]; found {
 			return nil, fmt.Errorf("duplicated vote detected from validator %s at height %d", valAddrStr, reqHeight)
@@ -277,7 +266,7 @@ func FilterVoteExtensions(ctx sdk.Context, reqHeight int64, extVoteInfo []abciTy
 
 		_, validator := validatorSet.GetByAddress(valAddrStr)
 		if validator == nil {
-			if milestoneAbci.ShouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
+			if shouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
 				logger.Error(helper.ErrFailedToGetValidator(valAddrStr))
 			}
 			continue
@@ -707,7 +696,7 @@ func checkNonRpVoteExtensionsSignatures(ctx sdk.Context, extVoteInfo []abciTypes
 
 		_, validator := validatorSet.GetByAddress(valAddr)
 		if validator == nil {
-			if milestoneAbci.ShouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
+			if shouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
 				return errors.New(helper.ErrFailedToGetValidator(valAddr))
 			}
 			continue
@@ -752,7 +741,7 @@ func getMajorityNonRpVoteExtension(ctx sdk.Context, extVoteInfo []abciTypes.Exte
 
 		_, validator := validatorSet.GetByAddress(valAddr)
 		if validator == nil {
-			if milestoneAbci.ShouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
+			if shouldErrorOnValidatorNotFound(ctx.BlockHeight()) {
 				return nil, errors.New(helper.ErrFailedToGetValidator(valAddr))
 			}
 			continue
@@ -932,4 +921,8 @@ func packExtensionWithVote(extension []byte) []byte {
 
 func shouldCheckVotingPower(currentHeight int64) bool {
 	return currentHeight < helper.GetDisableVPCheckHeight() || currentHeight >= helper.GetTallyFixHeight()
+}
+
+func shouldErrorOnValidatorNotFound(height int64) bool {
+	return height >= helper.GetTallyFixHeight() || height < helper.GetDisableValSetCheckHeight()
 }

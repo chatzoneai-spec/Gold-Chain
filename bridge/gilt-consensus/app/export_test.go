@@ -166,7 +166,6 @@ func TestExportAppStateAndValidators_SpecificModuleExport(t *testing.T) {
 	modules := [][]string{
 		{"stake"},
 		{"checkpoint"},
-		{"gilt"},
 		{"auth", "bank"},
 	}
 

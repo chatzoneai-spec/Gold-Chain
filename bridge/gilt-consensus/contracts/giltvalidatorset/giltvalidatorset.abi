@@ -1,0 +1,33 @@
+[
+  {
+    "inputs": [],
+    "name": "getLivingValidators",
+    "outputs": [
+      {"internalType": "address[]", "name": "", "type": "address[]"},
+      {"internalType": "bytes[]", "name": "", "type": "bytes[]"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "name": "currentValidatorSet",
+    "outputs": [
+      {"internalType": "address", "name": "consensusAddress", "type": "address"},
+      {"internalType": "address payable", "name": "feeAddress", "type": "address"},
+      {"internalType": "address", "name": "BBCFeeAddress", "type": "address"},
+      {"internalType": "uint64", "name": "votingPower", "type": "uint64"},
+      {"internalType": "bool", "name": "jailed", "type": "bool"},
+      {"internalType": "uint256", "name": "incoming", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "name": "currentValidatorSetMap",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

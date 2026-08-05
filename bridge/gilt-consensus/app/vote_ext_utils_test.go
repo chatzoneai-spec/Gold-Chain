@@ -21,8 +21,6 @@ import (
 
 	util "github.com/giltchain/gilt-consensus/common/hex"
 	"github.com/giltchain/gilt-consensus/sidetxs"
-	milestoneKeeper "github.com/giltchain/gilt-consensus/x/milestone/keeper"
-	milestoneTypes "github.com/giltchain/gilt-consensus/x/milestone/types"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
 )
 
@@ -54,14 +52,13 @@ func TestValidateVoteExtensions(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		ctx             sdk.Context
-		extVoteInfo     []abci.ExtendedVoteInfo
-		round           int32
-		valSet          stakeTypes.ValidatorSet
-		milestoneKeeper milestoneKeeper.Keeper
-		shouldError     bool
-		expectedErr     string
+		name        string
+		ctx         sdk.Context
+		extVoteInfo []abci.ExtendedVoteInfo
+		round       int32
+		valSet      stakeTypes.ValidatorSet
+		shouldError bool
+		expectedErr string
 	}{
 		{
 			name:        "ves disabled with non-empty vote extension",
@@ -85,9 +82,9 @@ func TestValidateVoteExtensions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.shouldError {
-				require.Error(t, ValidateVoteExtensions(tt.ctx, CurrentHeight, tt.extVoteInfo, tt.round, &valSet, tt.milestoneKeeper))
+				require.Error(t, ValidateVoteExtensions(tt.ctx, CurrentHeight, tt.extVoteInfo, tt.round, &valSet))
 			} else {
-				err := ValidateVoteExtensions(tt.ctx, CurrentHeight, tt.extVoteInfo, tt.round, &valSet, tt.milestoneKeeper)
+				err := ValidateVoteExtensions(tt.ctx, CurrentHeight, tt.extVoteInfo, tt.round, &valSet)
 				require.NoError(t, err)
 			}
 		})
@@ -648,7 +645,6 @@ func TestValidateVoteExtensions_RejectsPaddedVoteExtension(t *testing.T) {
 		[]abci.ExtendedVoteInfo{ext},
 		1,
 		&valSet,
-		hApp.MilestoneKeeper,
 	)
 
 	require.Error(t, err)
@@ -765,7 +761,6 @@ func TestFilterVoteExtensions_SkipsPaddedVoteExtension(t *testing.T) {
 		extVoteInfo,
 		round,
 		&valSet,
-		hApp.MilestoneKeeper,
 		sdklog.NewTestLogger(t),
 	)
 	require.NoError(t, err)
@@ -863,69 +858,6 @@ func setupExtendedVoteInfoWithNonRp(t *testing.T, flag cmtTypes.BlockIDFlag, txH
 		},
 		BlockHash: blockHashBytes,
 		Height:    VoteExtBlockHeight,
-	}
-
-	// marshal it into Protobuf bytes
-	voteExtensionBytes, err := voteExtensionProto.Marshal()
-	require.NoErrorf(t, err, "failed to marshal voteExtensionProto: %v", err)
-
-	cve := cmtTypes.CanonicalVoteExtension{
-		Extension: voteExtensionBytes,
-		Height:    CurrentHeight - 1, // the vote extension was signed in the previous height
-		Round:     int64(1),
-		ChainId:   "",
-	}
-
-	marshalDelimitedFn := func(msg proto.Message) ([]byte, error) {
-		var buf bytes.Buffer
-		if _, err := protoio.NewDelimitedWriter(&buf).WriteMsg(msg); err != nil {
-			return nil, err
-		}
-
-		return buf.Bytes(), nil
-	}
-	extSignBytes, err := marshalDelimitedFn(&cve)
-	require.NoErrorf(t, err, "failed to encode CanonicalVoteExtension: %v", err)
-
-	// Sign the vote extension
-	signature, err := privKey.Sign(extSignBytes)
-	require.NoErrorf(t, err, "failed to sign extSignBytes: %v", err)
-
-	// Sign nonRpVE
-	signatureNonRpVE, err := privKey.Sign(dummyExt)
-	ok := cmtPubKey.VerifySignature(dummyExt, signatureNonRpVE)
-	if !ok {
-		fmt.Println(" Error : Signature verification failed!")
-	}
-
-	return abci.ExtendedVoteInfo{
-		BlockIdFlag:             flag,
-		VoteExtension:           voteExtensionBytes,
-		ExtensionSignature:      signature,
-		Validator:               validator,
-		NonRpVoteExtension:      dummyExt,
-		NonRpExtensionSignature: signatureNonRpVE,
-	}
-}
-
-func setupExtendedVoteInfoWithMilestoneProposition(t *testing.T, flag cmtTypes.BlockIDFlag, txHashBytes, blockHashBytes []byte, validator abci.Validator, privKey cmtcrypto.PrivKey, height int64, app *GiltConsensusApp, cmtPubKey cmtcrypto.PubKey, milestoneProposition milestoneTypes.MilestoneProposition) abci.ExtendedVoteInfo {
-	t.Helper()
-
-	dummyExt, err := GetDummyNonRpVoteExtension(height, app.ChainID())
-	if err != nil {
-		panic(err)
-	}
-	// create a protobuf msg for ConsolidatedSideTxResponse
-	voteExtensionProto := sidetxs.VoteExtension{
-		SideTxResponses: []sidetxs.SideTxResponse{
-			{
-				TxHash: txHashBytes,
-				Result: sidetxs.Vote_VOTE_YES,
-			},
-		},
-		BlockHash:            blockHashBytes,
-		Height:               VoteExtBlockHeight,
-		MilestoneProposition: &milestoneProposition,
 	}
 
 	// marshal it into Protobuf bytes

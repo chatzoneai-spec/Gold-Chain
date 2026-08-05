@@ -23,7 +23,6 @@ import (
 	"github.com/giltchain/gilt-consensus/contracts/statereceiver"
 	"github.com/giltchain/gilt-consensus/contracts/statesender"
 	"github.com/giltchain/gilt-consensus/contracts/validatorset"
-	"github.com/giltchain/gilt-consensus/x/gilt/grpc"
 )
 
 const (
@@ -48,7 +47,6 @@ var ContractsABIsMap = make(map[string]*abi.ABI)
 type IContractCaller interface {
 	GetHeaderInfo(headerID uint64, rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (root common.Hash, start, end, createdAt uint64, proposer string, err error)
 	GetRootHash(start, end, checkpointLength uint64) ([]byte, error)
-	GetVoteOnHash(start, end uint64, hash, milestoneID string) (bool, error)
 	GetLastChildBlock(rootChainInstance *rootchain.Rootchain) (uint64, error)
 	CurrentHeaderBlock(rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (uint64, error)
 	GetBalance(address common.Address) (*big.Int, error)
@@ -56,8 +54,6 @@ type IContractCaller interface {
 	GetCheckpointSign(txHash common.Hash) ([]byte, []byte, []byte, error)
 	GetMainChainBlock(*big.Int) (*ethTypes.Header, error)
 	GetGiltChainBlock(context.Context, *big.Int) (*ethTypes.Header, error)
-	GetGiltChainBlockInfoInBatch(ctx context.Context, start, end int64) ([]*ethTypes.Header, []uint64, []common.Address, error)
-	GetGiltChainBlockTd(ctx context.Context, blockHash common.Hash) (uint64, error)
 	GetGiltChainBlockAuthor(*big.Int) (*common.Address, error)
 	IsTxConfirmed(common.Hash, uint64) bool
 	GetConfirmedTxReceipt(common.Hash, uint64) (*ethTypes.Receipt, error)
@@ -75,13 +71,10 @@ type IContractCaller interface {
 	GetMainTxReceipt(common.Hash) (*ethTypes.Receipt, error)
 	GetGiltTxReceipt(common.Hash) (*ethTypes.Receipt, error)
 	CurrentAccountStateRoot(stakingInfoInstance *stakinginfo.Stakinginfo) ([32]byte, error)
-	CurrentSpanNumber(validatorSet *validatorset.Validatorset) (Number *big.Int)
-	GetSpanDetails(id *big.Int, validatorSet *validatorset.Validatorset) (*big.Int, *big.Int, *big.Int, error)
 	CurrentStateCounter(stateSenderInstance *statesender.Statesender) (Number *big.Int)
 	CheckIfBlocksExist(end uint64) (bool, error)
 	GetRootChainInstance(rootChainAddress string) (*rootchain.Rootchain, error)
 	GetStakingInfoInstance(stakingInfoAddress string) (*stakinginfo.Stakinginfo, error)
-	GetValidatorSetInstance(validatorSetAddress string) (*validatorset.Validatorset, error)
 	GetSlashManagerInstance(slashManagerAddress string) (*slashmanager.Slashmanager, error)
 	GetStateSenderInstance(stateSenderAddress string) (*statesender.Statesender, error)
 	GetStateReceiverInstance(stateReceiverAddress string) (*statereceiver.Statereceiver, error)
@@ -96,9 +89,6 @@ type ContractCaller struct {
 	GiltChainClient    *ethclient.Client
 	GiltChainRPCClient *rpc.Client
 	GiltChainTimeout   time.Duration
-
-	GiltChainGrpcFlag   bool
-	GiltChainGrpcClient *grpc.GiltGRPCClient
 
 	RootChainABI     abi.ABI
 	StakingInfoABI   abi.ABI
@@ -129,8 +119,6 @@ func NewContractCaller() (contractCallerObj ContractCaller, err error) {
 	contractCallerObj.GiltChainTimeout = config.GiltRPCTimeout
 	contractCallerObj.MainChainRPC = GetMainChainRPCClient()
 	contractCallerObj.GiltChainRPCClient = GetGiltRPCClient()
-	contractCallerObj.GiltChainGrpcFlag = config.GiltGRPCFlag
-	contractCallerObj.GiltChainGrpcClient = GetGiltGRPCClient()
 
 	// listeners and processors instance cache (address->ABI)
 	contractCallerObj.ContractInstanceCache = make(map[common.Address]interface{})
@@ -180,26 +168,6 @@ func (c *ContractCaller) GetStakingInfoInstance(stakingInfoAddress string) (*sta
 	}
 
 	return contractInstance.(*stakinginfo.Stakinginfo), nil
-}
-
-// GetValidatorSetInstance returns stakingInfo contract instance for a selected chain
-func (c *ContractCaller) GetValidatorSetInstance(validatorSetAddress string) (*validatorset.Validatorset, error) {
-	address := common.HexToAddress(validatorSetAddress)
-
-	contractInstance, ok := c.ContractInstanceCache[address]
-	if !ok {
-		ci, err := validatorset.NewValidatorset(address, mainChainClient)
-		c.ContractInstanceCache[address] = ci
-
-		if err != nil {
-			Logger.Error("Error in fetching the validator set from mainChain client", "error", err)
-			return nil, err
-		}
-
-		return ci, err
-	}
-
-	return contractInstance.(*validatorset.Validatorset), nil
 }
 
 // GetSlashManagerInstance returns the slashManager contract instance for a selected base chain
@@ -302,18 +270,7 @@ func (c *ContractCaller) GetRootHash(start, end, checkpointLength uint64) ([]byt
 	ctx, cancel := context.WithTimeout(context.Background(), c.GiltChainTimeout)
 	defer cancel()
 
-	var rootHash string
-	var err error
-
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			return nil, grpcErr
-		}
-		rootHash, err = grpcClient.GetRootHash(ctx, start, end)
-	} else {
-		rootHash, err = c.GiltChainClient.GetRootHash(ctx, start, end)
-	}
+	rootHash, err := c.GiltChainClient.GetRootHash(ctx, start, end)
 
 	if err != nil {
 		Logger.Error("Could not fetch rootHash from gilt chain", "error", err)
@@ -321,35 +278,6 @@ func (c *ContractCaller) GetRootHash(start, end, checkpointLength uint64) ([]byt
 	}
 
 	return common.FromHex(rootHash), nil
-}
-
-// GetVoteOnHash get vote on hash from the gilt chain for the corresponding milestone
-func (c *ContractCaller) GetVoteOnHash(start, end uint64, hash, milestoneID string) (bool, error) {
-	if start > end {
-		return false, errors.New("Start block number is greater than the end block number")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), c.GiltChainTimeout)
-	defer cancel()
-
-	var vote bool
-	var err error
-
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			return false, grpcErr
-		}
-		vote, err = grpcClient.GetVoteOnHash(ctx, start, end, hash, milestoneID)
-	} else {
-		vote, err = c.GiltChainClient.GetVoteOnHash(ctx, start, end, hash, milestoneID)
-	}
-
-	if err != nil {
-		return false, errors.New(fmt.Sprint("Error in fetching vote from gilt chain", "err", err))
-	}
-
-	return vote, nil
 }
 
 // GetLastChildBlock fetch current child block
@@ -440,28 +368,37 @@ func (c *ContractCaller) GetMainChainBlockTime(ctx context.Context, blockNum uin
 	return time.Unix(int64(latestBlock.Time()), 0), nil
 }
 
+// GetGiltChainFinalizedNumber returns the Parlia finalized block number at the current head.
+func (c *ContractCaller) GetGiltChainFinalizedNumber(ctx context.Context) (uint64, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.GiltChainTimeout)
+	defer cancel()
+
+	var finalizedNumber hexutil.Uint64
+	err := c.GiltChainClient.Client().CallContext(ctx, &finalizedNumber, "parlia_getFinalizedNumber", "latest")
+	if err != nil {
+		Logger.Error("Unable to fetch Parlia finalized number from gilt chain", "error", err)
+		return 0, err
+	}
+
+	return uint64(finalizedNumber), nil
+}
+
+// GetGiltChainFinalizedBlock returns the Parlia finalized block header.
+func (c *ContractCaller) GetGiltChainFinalizedBlock(ctx context.Context) (*ethTypes.Header, error) {
+	finalizedNumber, err := c.GetGiltChainFinalizedNumber(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.GetGiltChainBlock(ctx, big.NewInt(0).SetUint64(finalizedNumber))
+}
+
 // GetGiltChainBlock returns gilt chain block header
 func (c *ContractCaller) GetGiltChainBlock(ctx context.Context, blockNum *big.Int) (header *ethTypes.Header, err error) {
 	ctx, cancel := context.WithTimeout(ctx, c.GiltChainTimeout)
 	defer cancel()
 
-	var latestBlock *ethTypes.Header
-
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			Logger.Error(errUnableToConnect, "error", grpcErr)
-			return nil, grpcErr
-		}
-		if blockNum == nil {
-			// LatestBlockNumber is BlockNumber(-2) in go-ethereum rpc
-			latestBlock, err = grpcClient.HeaderByNumber(ctx, -2)
-		} else {
-			latestBlock, err = grpcClient.HeaderByNumber(ctx, blockNum.Int64())
-		}
-	} else {
-		latestBlock, err = c.GiltChainClient.HeaderByNumber(ctx, blockNum)
-	}
+	latestBlock, err := c.GiltChainClient.HeaderByNumber(ctx, blockNum)
 
 	if err != nil {
 		Logger.Error(errUnableToConnect, "error", err)
@@ -471,129 +408,13 @@ func (c *ContractCaller) GetGiltChainBlock(ctx context.Context, blockNum *big.In
 	return latestBlock, nil
 }
 
-// GetGiltChainBlockInfoInBatch returns gilt chain block headers and TD via a single RPC Batch call.
-// It tries to get blocks from the range interval but returns only the ones found on the chain
-func (c *ContractCaller) GetGiltChainBlockInfoInBatch(ctx context.Context, start, end int64) ([]*ethTypes.Header, []uint64, []common.Address, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, c.GiltChainTimeout)
-	defer cancel()
-
-	totalBlocks := end - start + 1
-	rpcClient := c.GiltChainClient.Client()
-	batchElems := make([]rpc.BatchElem, 0, 2*(totalBlocks))
-
-	// Header Batch
-	result := make([]*ethTypes.Header, totalBlocks)
-	for i := start; i <= end; i++ {
-		blockNumHex := fmt.Sprintf("0x%x", i)
-
-		batchElems = append(batchElems, rpc.BatchElem{
-			Method: "eth_getHeaderByNumber",
-			Args:   []interface{}{blockNumHex},
-			Result: &result[i-start],
-		})
-	}
-
-	type tdResp struct {
-		TotalDifficulty hexutil.Uint64 `json:"totalDifficulty"`
-	}
-
-	// TD Batch
-	resultTd := make([]*tdResp, totalBlocks)
-	for i := start; i <= end; i++ {
-		blockNumHex := fmt.Sprintf("0x%x", i)
-
-		batchElems = append(batchElems, rpc.BatchElem{
-			Method: "eth_getTdByNumber",
-			Args:   []interface{}{blockNumHex},
-			Result: &resultTd[i-start],
-		})
-	}
-
-	// Author Batch
-	resultAuthor := make([]*common.Address, totalBlocks)
-	for i := start; i <= end; i++ {
-		if i > 0 { // skip genesis block
-			blockNumHex := fmt.Sprintf("0x%x", i)
-			batchElems = append(batchElems, rpc.BatchElem{
-				Method: "gilt_getAuthor",
-				Args:   []interface{}{blockNumHex},
-				Result: &resultAuthor[i-start],
-			})
-		}
-	}
-
-	if err := rpcClient.BatchCallContext(timeoutCtx, batchElems); err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Get results until capture an error (header not found)
-	tds := make([]uint64, 0, totalBlocks)
-	headers := make([]*ethTypes.Header, 0, totalBlocks)
-	authors := make([]common.Address, 0, totalBlocks)
-	for i := 0; i < int(totalBlocks); i++ {
-		blockNum := start + int64(i)
-		elemHeader := batchElems[i]
-		elemTd := batchElems[i+int(totalBlocks)]
-
-		if elemHeader.Error != nil || elemTd.Error != nil || result[i] == nil || resultTd[i] == nil {
-			Logger.Debug("Error fetching block info", "error", elemHeader.Error, "error", elemTd.Error, "blockNum", blockNum)
-			break
-		}
-
-		var author common.Address
-		if blockNum > 0 {
-			authorReqIndex := 2*int(totalBlocks) + i
-			if start == 0 {
-				authorReqIndex--
-			}
-			elemAuthor := batchElems[authorReqIndex]
-			if elemAuthor.Error != nil || resultAuthor[i] == nil {
-				Logger.Debug("Error fetching block author", "error", elemAuthor.Error, "blockNum", blockNum)
-				break
-			}
-			author = *resultAuthor[i]
-		}
-
-		headers = append(headers, result[i])
-		tds = append(tds, uint64(resultTd[i].TotalDifficulty))
-		authors = append(authors, author)
-	}
-
-	return headers, tds, authors, nil
-}
-
-// GetGiltChainBlockTd returns total difficulty of a block
-func (c *ContractCaller) GetGiltChainBlockTd(ctx context.Context, blockHash common.Hash) (uint64, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.GiltChainTimeout)
-	defer cancel()
-
-	rpcClient := c.GiltChainClient.Client()
-
-	var resp map[string]interface{}
-	if err := rpcClient.CallContext(ctx, &resp, "eth_getTdByHash", blockHash.Hex()); err != nil {
-		return 0, err
-	}
-
-	raw, ok := resp["totalDifficulty"].(string)
-	if !ok {
-		return 0, fmt.Errorf("unexpected totalDifficulty type %T", resp["totalDifficulty"])
-	}
-
-	td, err := hexutil.DecodeUint64(raw)
-	if err != nil {
-		return 0, fmt.Errorf("failed to decode totalDifficulty %q: %w", raw, err)
-	}
-
-	return td, nil
-}
-
 // GetGiltChainBlockAuthor returns the producer of the gilt block
 func (c *ContractCaller) GetGiltChainBlockAuthor(blockNum *big.Int) (*common.Address, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.GiltChainTimeout)
 	defer cancel()
 
 	var author *common.Address
-	err := c.GiltChainClient.Client().CallContext(ctx, &author, "gilt_getAuthor", toBlockNumArg(blockNum))
+	err := c.GiltChainClient.Client().CallContext(ctx, &author, "parlia_getAuthor", toBlockNumArg(blockNum))
 	if err != nil {
 		Logger.Error(errUnableToConnect, "error", err)
 		return nil, err
@@ -820,35 +641,6 @@ func (c *ContractCaller) CurrentAccountStateRoot(stakingInfoInstance *stakinginf
 	return accountStateRoot, nil
 }
 
-//
-// Span-related functions
-//
-
-// CurrentSpanNumber get current span
-func (c *ContractCaller) CurrentSpanNumber(validatorSetInstance *validatorset.Validatorset) (Number *big.Int) {
-	result, err := validatorSetInstance.CurrentSpanNumber(nil)
-	if err != nil {
-		Logger.Error("Unable to get current span number", "error", err)
-		return nil
-	}
-
-	return result
-}
-
-// GetSpanDetails get span details
-func (c *ContractCaller) GetSpanDetails(id *big.Int, validatorSetInstance *validatorset.Validatorset) (
-	*big.Int,
-	*big.Int,
-	*big.Int,
-	error,
-) {
-	d, err := validatorSetInstance.GetSpan(nil, id)
-	if err != nil {
-		return nil, nil, nil, errors.New("unable to get span details")
-	}
-	return d.Number, d.StartBlock, d.EndBlock, nil
-}
-
 // CurrentStateCounter get state counter
 func (c *ContractCaller) CurrentStateCounter(stateSenderInstance *statesender.Statesender) (Number *big.Int) {
 	result, err := stateSenderInstance.Counter(nil)
@@ -866,20 +658,7 @@ func (c *ContractCaller) CheckIfBlocksExist(number uint64) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.GiltChainTimeout)
 	defer cancel()
 
-	var (
-		header *ethTypes.Header
-		err    error
-	)
-
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			return false, grpcErr
-		}
-		header, err = grpcClient.HeaderByNumber(ctx, int64(number))
-	} else {
-		header, err = c.GiltChainClient.HeaderByNumber(ctx, big.NewInt(int64(number)))
-	}
+	header, err := c.GiltChainClient.HeaderByNumber(ctx, big.NewInt(int64(number)))
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
 			return false, nil
@@ -895,18 +674,7 @@ func (c *ContractCaller) CheckIfBlocksExist(number uint64) (bool, error) {
 
 // GetBlockByNumber returns blocks by number from the child chain (gilt)
 func (c *ContractCaller) GetBlockByNumber(ctx context.Context, blockNumber uint64) (*ethTypes.Block, error) {
-	var block *ethTypes.Block
-	var err error
-
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			return nil, grpcErr
-		}
-		block, err = grpcClient.BlockByNumber(ctx, int64(blockNumber))
-	} else {
-		block, err = c.GiltChainClient.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
-	}
+	block, err := c.GiltChainClient.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
 
 	if err != nil {
 		Logger.Error("Unable to fetch block by number from child chain", "block", block, "err", err)
@@ -925,7 +693,12 @@ func (c *ContractCaller) GetMainTxReceipt(txHash common.Hash) (*ethTypes.Receipt
 	ctx, cancel := context.WithTimeout(context.Background(), c.MainChainTimeout)
 	defer cancel()
 
-	return c.getTxReceipt(ctx, c.MainChainClient, nil, txHash)
+	return c.getTxReceipt(ctx, c.MainChainClient, txHash)
+}
+
+// getTxReceipt returns a transaction receipt from the given eth client.
+func (c *ContractCaller) getTxReceipt(ctx context.Context, client *ethclient.Client, txHash common.Hash) (*ethTypes.Receipt, error) {
+	return client.TransactionReceipt(ctx, txHash)
 }
 
 // GetGiltTxReceipt returns gilt tx receipt
@@ -933,21 +706,7 @@ func (c *ContractCaller) GetGiltTxReceipt(txHash common.Hash) (*ethTypes.Receipt
 	ctx, cancel := context.WithTimeout(context.Background(), c.GiltChainTimeout)
 	defer cancel()
 
-	if c.GiltChainGrpcFlag {
-		grpcClient, grpcErr := c.getRequiredGiltGRPCClient()
-		if grpcErr != nil {
-			return nil, grpcErr
-		}
-		return c.getTxReceipt(ctx, nil, grpcClient, txHash)
-	}
-	return c.getTxReceipt(ctx, c.GiltChainClient, nil, txHash)
-}
-
-func (c *ContractCaller) getTxReceipt(ctx context.Context, client *ethclient.Client, grpcClient *grpc.GiltGRPCClient, txHash common.Hash) (*ethTypes.Receipt, error) {
-	if grpcClient != nil {
-		return grpcClient.TransactionReceipt(ctx, txHash)
-	}
-	return client.TransactionReceipt(ctx, txHash)
+	return c.getTxReceipt(ctx, c.GiltChainClient, txHash)
 }
 
 // GetCheckpointSign returns sigs input of committed checkpoint transaction
@@ -969,14 +728,6 @@ func (c *ContractCaller) GetCheckpointSign(txHash common.Hash) ([]byte, []byte, 
 	chainABI := c.RootChainABI
 
 	return UnpackSigAndVotes(payload, chainABI)
-}
-
-// getRequiredGiltGRPCClient returns the gilt grpc client or an error
-func (c *ContractCaller) getRequiredGiltGRPCClient() (*grpc.GiltGRPCClient, error) {
-	if c.GiltChainGrpcClient == nil {
-		return nil, errors.New("gilt grpc client is nil while gilt grpc flag is enabled")
-	}
-	return c.GiltChainGrpcClient, nil
 }
 
 // utility and helper methods

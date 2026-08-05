@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/giltchain/gilt-consensus/file"
-	giltgrpc "github.com/giltchain/gilt-consensus/x/gilt/grpc"
 )
 
 const (
@@ -207,9 +206,8 @@ var (
 
 // giltClient stores eth/rpc client for gilt
 var (
-	giltClient     *ethclient.Client
-	giltRPCClient  *rpc.Client
-	giltGRPCClient *giltgrpc.GiltGRPCClient
+	giltClient    *ethclient.Client
+	giltRPCClient *rpc.Client
 )
 
 // private key object
@@ -435,17 +433,6 @@ func InitGiltConsensusConfigWith(homeDir string, giltconsensusConfigFileFromFlag
 	giltClient = ethclient.NewClient(giltRPCClient)
 	warnIfGiltRPCInaccessible(giltClient, conf.Custom.GiltRPCTimeout, conf.Custom.GiltRPCUrl)
 
-	if conf.Custom.GiltGRPCFlag && conf.Custom.GiltGRPCUrl != "" {
-		client, err := giltgrpc.NewGiltGRPCClient(conf.Custom.GiltGRPCUrl, Logger)
-		if err != nil {
-			log.Fatal("unable to create gilt gRPC client", "URL", conf.Custom.GiltGRPCUrl, "error", err)
-		}
-		giltGRPCClient = client
-		warnIfGiltGRPCInaccessible(giltGRPCClient, conf.Custom.GiltRPCTimeout, conf.Custom.GiltGRPCUrl)
-	} else if conf.Custom.GiltGRPCFlag && conf.Custom.GiltGRPCUrl == "" {
-		log.Fatal("gilt gRPC is enabled but gilt_grpc_url is empty")
-	}
-
 	// Set default producers based on the chain if not already set by config or flags
 	if conf.Custom.ProducerVotes == "" {
 		switch conf.Custom.Chain {
@@ -520,22 +507,6 @@ func warnIfGiltRPCInaccessible(client *ethclient.Client, timeout time.Duration, 
 
 	if _, err := client.BlockNumber(ctx); err != nil {
 		Logger.Warn("Gilt RPC endpoint appears inaccessible at startup", "URL", url, "error", err)
-	}
-}
-
-// warnIfGiltGRPCInaccessible checks if the Gilt gRPC endpoint is accessible by making a simple call to get the latest block header.
-// If the call fails, it logs a warning message. This is useful to detect issues with the Gilt gRPC endpoint at startup.
-func warnIfGiltGRPCInaccessible(client *giltgrpc.GiltGRPCClient, timeout time.Duration, url string) {
-	if client == nil {
-		Logger.Warn("Gilt gRPC client is nil", "URL", url)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	if _, err := client.HeaderByNumber(ctx, -2); err != nil {
-		Logger.Warn("Gilt gRPC endpoint appears inaccessible at startup", "URL", url, "error", err)
 	}
 }
 
@@ -1250,11 +1221,6 @@ func GetLogsWriter(logsWriterFile string) io.Writer {
 		return logWriter
 	}
 	return os.Stdout
-}
-
-// GetGiltGRPCClient returns gilt gRPC client
-func GetGiltGRPCClient() *giltgrpc.GiltGRPCClient {
-	return giltGRPCClient
 }
 
 // Sanitize enforces minimums and returns notes and corrected key/values

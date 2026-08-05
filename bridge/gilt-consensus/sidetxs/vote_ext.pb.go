@@ -8,7 +8,6 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
 	_ "github.com/cosmos/gogoproto/gogoproto"
 	proto "github.com/cosmos/gogoproto/proto"
-	types "github.com/giltchain/gilt-consensus/x/milestone/types"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -56,8 +55,7 @@ func (Vote) EnumDescriptor() ([]byte, []int) {
 
 // VoteExtension contains additional data included by validators in their votes.
 // Introduced in ABCI++, vote extensions allow validators to include
-// supplementary information like milestone propositions and side transaction
-// results.
+// supplementary information like side transaction results.
 type VoteExtension struct {
 	// Hash of the block this vote extension is for.
 	BlockHash []byte `protobuf:"bytes,1,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
@@ -65,8 +63,6 @@ type VoteExtension struct {
 	Height int64 `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
 	// Results of side transaction validation by this validator.
 	SideTxResponses []SideTxResponse `protobuf:"bytes,3,rep,name=side_tx_responses,json=sideTxResponses,proto3" json:"side_tx_responses"`
-	// Milestone proposition submitted by this validator.
-	MilestoneProposition *types.MilestoneProposition `protobuf:"bytes,4,opt,name=milestone_proposition,json=milestoneProposition,proto3" json:"milestone_proposition,omitempty"`
 }
 
 func (m *VoteExtension) Reset()         { *m = VoteExtension{} }
@@ -119,13 +115,6 @@ func (m *VoteExtension) GetHeight() int64 {
 func (m *VoteExtension) GetSideTxResponses() []SideTxResponse {
 	if m != nil {
 		return m.SideTxResponses
-	}
-	return nil
-}
-
-func (m *VoteExtension) GetMilestoneProposition() *types.MilestoneProposition {
-	if m != nil {
-		return m.MilestoneProposition
 	}
 	return nil
 }
@@ -246,18 +235,6 @@ func (m *VoteExtension) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.MilestoneProposition != nil {
-		{
-			size, err := m.MilestoneProposition.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintVoteExt(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
 	if len(m.SideTxResponses) > 0 {
 		for iNdEx := len(m.SideTxResponses) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -351,10 +328,6 @@ func (m *VoteExtension) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovVoteExt(uint64(l))
 		}
-	}
-	if m.MilestoneProposition != nil {
-		l = m.MilestoneProposition.Size()
-		n += 1 + l + sovVoteExt(uint64(l))
 	}
 	return n
 }
@@ -494,42 +467,6 @@ func (m *VoteExtension) Unmarshal(dAtA []byte) error {
 			}
 			m.SideTxResponses = append(m.SideTxResponses, SideTxResponse{})
 			if err := m.SideTxResponses[len(m.SideTxResponses)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MilestoneProposition", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowVoteExt
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthVoteExt
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthVoteExt
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.MilestoneProposition == nil {
-				m.MilestoneProposition = &types.MilestoneProposition{}
-			}
-			if err := m.MilestoneProposition.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

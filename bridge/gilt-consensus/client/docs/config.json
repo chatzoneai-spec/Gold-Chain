@@ -7,9 +7,6 @@
   },
   "apis": [
     {
-      "url": "./tmp-swagger-gen/giltconsensusv2/gilt/query.swagger.json"
-    },
-    {
       "url": "./tmp-swagger-gen/giltconsensusv2/chainmanager/query.swagger.json"
     },
     {
@@ -17,9 +14,6 @@
     },
     {
       "url": "./tmp-swagger-gen/giltconsensusv2/clerk/query.swagger.json"
-    },
-    {
-      "url": "./tmp-swagger-gen/giltconsensusv2/milestone/query.swagger.json"
     },
     {
       "url": "./tmp-swagger-gen/giltconsensusv2/stake/query.swagger.json"

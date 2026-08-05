@@ -97,7 +97,7 @@ func (k Keeper) Logger(ctx context.Context) log.Logger {
 	return sdkCtx.Logger().With("module", "x/"+types.ModuleName)
 }
 
-// GetAuthority returns x/gilt module's authority
+// GetAuthority returns the x/checkpoint module authority
 func (k Keeper) GetAuthority() string {
 	return k.authority
 }

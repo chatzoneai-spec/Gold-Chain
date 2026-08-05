@@ -9,7 +9,6 @@ import (
 
 	"github.com/giltchain/gilt-consensus/common/cache"
 	"github.com/giltchain/gilt-consensus/helper"
-	giltTypes "github.com/giltchain/gilt-consensus/x/gilt/types"
 )
 
 var (
@@ -43,7 +42,7 @@ func IsValidCheckpoint(start uint64, end uint64, rootHash []byte, checkpointLeng
 		if err != nil {
 			return false, fmt.Errorf(
 				"%w: block existence check failed (end=%d confirmations=%d target=%d): %w",
-				giltTypes.ErrFailedToQueryGilt,
+				ErrFailedToQueryChild,
 				end,
 				confirmations,
 				end+confirmations,
@@ -73,7 +72,7 @@ func IsValidCheckpoint(start uint64, end uint64, rootHash []byte, checkpointLeng
 		if err != nil {
 			return false, fmt.Errorf(
 				"%w: root hash query failed (start=%d end=%d checkpointLength=%d): %w",
-				giltTypes.ErrFailedToQueryGilt,
+				ErrFailedToQueryChild,
 				start,
 				end,
 				checkpointLength,

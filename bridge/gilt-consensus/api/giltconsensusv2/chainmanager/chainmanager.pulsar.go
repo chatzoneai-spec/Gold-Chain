@@ -23,7 +23,6 @@ var (
 	fd_ChainParams_staking_info_address   protoreflect.FieldDescriptor
 	fd_ChainParams_state_sender_address   protoreflect.FieldDescriptor
 	fd_ChainParams_state_receiver_address protoreflect.FieldDescriptor
-	fd_ChainParams_validator_set_address  protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -36,7 +35,6 @@ func init() {
 	fd_ChainParams_staking_info_address = md_ChainParams.Fields().ByName("staking_info_address")
 	fd_ChainParams_state_sender_address = md_ChainParams.Fields().ByName("state_sender_address")
 	fd_ChainParams_state_receiver_address = md_ChainParams.Fields().ByName("state_receiver_address")
-	fd_ChainParams_validator_set_address = md_ChainParams.Fields().ByName("validator_set_address")
 }
 
 var _ protoreflect.Message = (*fastReflection_ChainParams)(nil)
@@ -146,12 +144,6 @@ func (x *fastReflection_ChainParams) Range(f func(protoreflect.FieldDescriptor, 
 			return
 		}
 	}
-	if x.ValidatorSetAddress != "" {
-		value := protoreflect.ValueOfString(x.ValidatorSetAddress)
-		if !f(fd_ChainParams_validator_set_address, value) {
-			return
-		}
-	}
 }
 
 // Has reports whether a field is populated.
@@ -181,8 +173,6 @@ func (x *fastReflection_ChainParams) Has(fd protoreflect.FieldDescriptor) bool {
 		return x.StateSenderAddress != ""
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
 		return x.StateReceiverAddress != ""
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
-		return x.ValidatorSetAddress != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: giltconsensusv2.chainmanager.ChainParams"))
@@ -213,8 +203,6 @@ func (x *fastReflection_ChainParams) Clear(fd protoreflect.FieldDescriptor) {
 		x.StateSenderAddress = ""
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
 		x.StateReceiverAddress = ""
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
-		x.ValidatorSetAddress = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: giltconsensusv2.chainmanager.ChainParams"))
@@ -252,9 +240,6 @@ func (x *fastReflection_ChainParams) Get(descriptor protoreflect.FieldDescriptor
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
 		value := x.StateReceiverAddress
 		return protoreflect.ValueOfString(value)
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
-		value := x.ValidatorSetAddress
-		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: giltconsensusv2.chainmanager.ChainParams"))
@@ -289,8 +274,6 @@ func (x *fastReflection_ChainParams) Set(fd protoreflect.FieldDescriptor, value 
 		x.StateSenderAddress = value.Interface().(string)
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
 		x.StateReceiverAddress = value.Interface().(string)
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
-		x.ValidatorSetAddress = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: giltconsensusv2.chainmanager.ChainParams"))
@@ -325,8 +308,6 @@ func (x *fastReflection_ChainParams) Mutable(fd protoreflect.FieldDescriptor) pr
 		panic(fmt.Errorf("field state_sender_address of message giltconsensusv2.chainmanager.ChainParams is not mutable"))
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
 		panic(fmt.Errorf("field state_receiver_address of message giltconsensusv2.chainmanager.ChainParams is not mutable"))
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
-		panic(fmt.Errorf("field validator_set_address of message giltconsensusv2.chainmanager.ChainParams is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: giltconsensusv2.chainmanager.ChainParams"))
@@ -353,8 +334,6 @@ func (x *fastReflection_ChainParams) NewField(fd protoreflect.FieldDescriptor) p
 	case "giltconsensusv2.chainmanager.ChainParams.state_sender_address":
 		return protoreflect.ValueOfString("")
 	case "giltconsensusv2.chainmanager.ChainParams.state_receiver_address":
-		return protoreflect.ValueOfString("")
-	case "giltconsensusv2.chainmanager.ChainParams.validator_set_address":
 		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
@@ -453,10 +432,6 @@ func (x *fastReflection_ChainParams) ProtoMethods() *protoiface.Methods {
 		if l > 0 {
 			n += 1 + l + runtime.Sov(uint64(l))
 		}
-		l = len(x.ValidatorSetAddress)
-		if l > 0 {
-			n += 1 + l + runtime.Sov(uint64(l))
-		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -485,13 +460,6 @@ func (x *fastReflection_ChainParams) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
-		}
-		if len(x.ValidatorSetAddress) > 0 {
-			i -= len(x.ValidatorSetAddress)
-			copy(dAtA[i:], x.ValidatorSetAddress)
-			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ValidatorSetAddress)))
-			i--
-			dAtA[i] = 0x52
 		}
 		if len(x.StateReceiverAddress) > 0 {
 			i -= len(x.StateReceiverAddress)
@@ -814,38 +782,6 @@ func (x *fastReflection_ChainParams) ProtoMethods() *protoiface.Methods {
 					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
 				}
 				x.StateReceiverAddress = string(dAtA[iNdEx:postIndex])
-				iNdEx = postIndex
-			case 10:
-				if wireType != 2 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ValidatorSetAddress", wireType)
-				}
-				var stringLen uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
-					}
-					if iNdEx >= l {
-						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					stringLen |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				intStringLen := int(stringLen)
-				if intStringLen < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				postIndex := iNdEx + intStringLen
-				if postIndex < 0 {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
-				}
-				if postIndex > l {
-					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
-				}
-				x.ValidatorSetAddress = string(dAtA[iNdEx:postIndex])
 				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
@@ -1446,8 +1382,6 @@ type ChainParams struct {
 	StateSenderAddress string `protobuf:"bytes,8,opt,name=state_sender_address,json=stateSenderAddress,proto3" json:"state_sender_address,omitempty"`
 	// Address of the state receiver contract on the Gilt chain.
 	StateReceiverAddress string `protobuf:"bytes,9,opt,name=state_receiver_address,json=stateReceiverAddress,proto3" json:"state_receiver_address,omitempty"`
-	// Address of the validator set contract on the root chain.
-	ValidatorSetAddress string `protobuf:"bytes,10,opt,name=validator_set_address,json=validatorSetAddress,proto3" json:"validator_set_address,omitempty"`
 }
 
 func (x *ChainParams) Reset() {
@@ -1515,13 +1449,6 @@ func (x *ChainParams) GetStateSenderAddress() string {
 func (x *ChainParams) GetStateReceiverAddress() string {
 	if x != nil {
 		return x.StateReceiverAddress
-	}
-	return ""
-}
-
-func (x *ChainParams) GetValidatorSetAddress() string {
-	if x != nil {
-		return x.ValidatorSetAddress
 	}
 	return ""
 }

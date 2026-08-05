@@ -98,13 +98,6 @@ contract StakingInfo is Ownable {
         bytes signerPubkey
     );
     event Restaked(uint256 indexed validatorId, uint256 amount, uint256 total);
-    event Jailed(
-        uint256 indexed validatorId,
-        uint256 indexed exitEpoch,
-        address indexed signer
-    );
-    event UnJailed(uint256 indexed validatorId, address indexed signer);
-    event Slashed(uint256 indexed nonce, uint256 indexed amount);
     event ThresholdChange(uint256 newThreshold, uint256 oldThreshold);
     event DynastyValueChange(uint256 newDynasty, uint256 oldDynasty);
     event ProposerBonusChange(
@@ -203,11 +196,6 @@ contract StakingInfo is Ownable {
         "Invalid sender, not stake manager");
         _;
     }
-    modifier onlySlashingManager() {
-        require(registry.getSlashingManagerAddress() == msg.sender,
-        "Invalid sender, not slashing manager");
-        _;
-    }
 
     constructor(address _registry) public {
         registry = Registry(_registry);
@@ -290,27 +278,6 @@ contract StakingInfo is Ownable {
         onlyStakeManager
     {
         emit Restaked(validatorId, amount, total);
-    }
-
-    function logJailed(uint256 validatorId, uint256 exitEpoch, address signer)
-        public
-        onlyStakeManager
-    {
-        emit Jailed(validatorId, exitEpoch, signer);
-    }
-
-    function logUnjailed(uint256 validatorId, address signer)
-        public
-        onlyStakeManager
-    {
-        emit UnJailed(validatorId, signer);
-    }
-
-    function logSlashed(uint256 nonce, uint256 amount)
-        public
-        onlySlashingManager
-    {
-        emit Slashed(nonce, amount);
     }
 
     function logThresholdChange(uint256 newThreshold, uint256 oldThreshold)

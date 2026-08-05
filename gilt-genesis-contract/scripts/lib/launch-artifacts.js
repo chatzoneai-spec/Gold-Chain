@@ -201,8 +201,8 @@ const SYSTEM_PREDEPLOYS = [
     key: "stateReceiver",
     contract: "StateReceiver",
     address: "0x0000000000000000000000000000000000003001",
-    classification: PREDEPLOY_CLASSIFICATIONS.RESERVED_INERT,
-    artifactPath: RESERVED_PREDEPLOY_ARTIFACT,
+    classification: PREDEPLOY_CLASSIFICATIONS.ACTIVE_CORE,
+    artifactPath: "StateReceiver.sol/StateReceiver.json",
   },
   {
     key: "nativeGiltBridge",

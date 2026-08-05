@@ -22,10 +22,8 @@ const (
 
 	// Module subsystems.
 
-	GiltSubsystem        = "gilt"
 	CheckpointSubsystem = "checkpoint"
 	ClerkSubsystem      = "clerk"
-	MilestoneSubsystem  = "milestone"
 	StakeSubsystem      = "stake"
 	TopupSubsystem      = "topup"
 )

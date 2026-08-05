@@ -38,9 +38,6 @@ start_testrpc
 echo "Starting our own child-chain instance"
 start_blockchain
 
-# migrate contracts
-npm run migrate "$@"
-
 if [ "$SOLIDITY_COVERAGE" = true ]; then
   npm run truffle:coverage "$@"
 else

@@ -28,10 +28,6 @@ func TestBaseProcessor_String(t *testing.T) {
 			processorName: "checkpoint",
 		},
 		{
-			name:          "span processor",
-			processorName: "span",
-		},
-		{
 			name:          "clerk processor",
 			processorName: "clerk",
 		},
@@ -61,7 +57,6 @@ func TestProcessorInterface_Methods(t *testing.T) {
 
 		// Test that our processors implement the Processor interface
 		var _ Processor = (*CheckpointProcessor)(nil)
-		var _ Processor = (*SpanProcessor)(nil)
 		var _ Processor = (*ClerkProcessor)(nil)
 		var _ Processor = (*FeeProcessor)(nil)
 	})

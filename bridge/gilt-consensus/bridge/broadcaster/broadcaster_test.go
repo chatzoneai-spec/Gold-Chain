@@ -43,7 +43,6 @@ import (
 	addressUtil "github.com/giltchain/gilt-consensus/common/hex"
 	"github.com/giltchain/gilt-consensus/helper"
 	helperMocks "github.com/giltchain/gilt-consensus/helper/mocks"
-	giltTypes "github.com/giltchain/gilt-consensus/x/gilt/types"
 	checkpointTypes "github.com/giltchain/gilt-consensus/x/checkpoint/types"
 )
 
@@ -228,8 +227,6 @@ func createTestApp(t *testing.T) (*app.GiltConsensusApp, sdk.Context, client.Con
 	ctx := hApp.BaseApp.NewContext(true)
 	hApp.BankKeeper.SetSendEnabled(ctx, "", true)
 	err := hApp.CheckpointKeeper.SetParams(ctx, checkpointTypes.DefaultParams())
-	require.NoError(t, err)
-	err = hApp.GiltKeeper.SetParams(ctx, giltTypes.DefaultParams())
 	require.NoError(t, err)
 
 	acc := authTypes.NewBaseAccount(giltconsensusAddressBytes, cosmosPrivKey.PubKey(), 1337, 0)

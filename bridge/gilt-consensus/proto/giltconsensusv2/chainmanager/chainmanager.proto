@@ -27,8 +27,7 @@ message ChainParams {
   string state_sender_address = 8 [ (amino.dont_omitempty) = true ];
   // Address of the state receiver contract on the Gilt chain.
   string state_receiver_address = 9 [ (amino.dont_omitempty) = true ];
-  // Address of the validator set contract on the root chain.
-  string validator_set_address = 10 [ (amino.dont_omitempty) = true ];
+  reserved 10;
 }
 
 // Params defines the parameters for the chainmanager module.

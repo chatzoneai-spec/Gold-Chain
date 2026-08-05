@@ -23,8 +23,6 @@ import (
 	"github.com/giltchain/gilt-consensus/x/chainmanager"
 	"github.com/giltchain/gilt-consensus/x/checkpoint"
 	"github.com/giltchain/gilt-consensus/x/clerk"
-	"github.com/giltchain/gilt-consensus/x/gilt"
-	"github.com/giltchain/gilt-consensus/x/milestone"
 	pricefeedTypes "github.com/giltchain/gilt-consensus/x/pricefeed/types"
 	"github.com/giltchain/gilt-consensus/x/stake"
 	"github.com/giltchain/gilt-consensus/x/topup"
@@ -124,9 +122,7 @@ func TestRunMigrations(t *testing.T) {
 					"clerk":        clerk.AppModule{}.ConsensusVersion(),
 					"checkpoint":   checkpoint.AppModule{}.ConsensusVersion(),
 					"chainmanager": chainmanager.AppModule{}.ConsensusVersion(),
-					"milestone":    milestone.AppModule{}.ConsensusVersion(),
 					"topup":        topup.AppModule{}.ConsensusVersion(),
-					"gilt":         gilt.AppModule{}.ConsensusVersion(),
 				},
 			)
 
@@ -169,9 +165,7 @@ func TestInitGenesisOnMigration(t *testing.T) {
 			"clerk":        clerk.AppModule{}.ConsensusVersion(),
 			"checkpoint":   checkpoint.AppModule{}.ConsensusVersion(),
 			"chainmanager": chainmanager.AppModule{}.ConsensusVersion(),
-			"milestone":    milestone.AppModule{}.ConsensusVersion(),
 			"topup":        topup.AppModule{}.ConsensusVersion(),
-			"gilt":         gilt.AppModule{}.ConsensusVersion(),
 		},
 	)
 	require.NoError(t, err)

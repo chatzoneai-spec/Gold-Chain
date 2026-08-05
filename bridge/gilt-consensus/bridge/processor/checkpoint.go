@@ -197,6 +197,11 @@ func (cp *CheckpointProcessor) startPollingForNoAck(ctx context.Context, interva
 // 2. check if the checkpoint has to be proposed for the given header block
 // 3. if so, propose checkpoint to giltconsensus.
 func (cp *CheckpointProcessor) sendCheckpointToGiltConsensus(headerBlockStr string) (err error) {
+	if IsCheckpointSubmissionHalted() {
+		cp.Logger.Error("CheckpointProcessor: checkpoint submission halted due to validator set divergence")
+		return errors.New("CheckpointProcessor: checkpoint submission halted")
+	}
+
 	header := ethTypes.Header{}
 	if err := header.UnmarshalJSON([]byte(headerBlockStr)); err != nil {
 		cp.Logger.Error(errMsgCpUnmarshallingHeaderBlock, "error", err)
@@ -271,6 +276,11 @@ func (cp *CheckpointProcessor) sendCheckpointToGiltConsensus(headerBlockStr stri
 // 2. check if this checkpoint has to be submitted to rootChain
 // 3. if so, create and broadcast the checkpoint transaction to rootChain
 func (cp *CheckpointProcessor) sendCheckpointToRootChain(eventBytes string, blockHeight int64) error {
+	if IsCheckpointSubmissionHalted() {
+		cp.Logger.Error("CheckpointProcessor: checkpoint submission halted due to validator set divergence")
+		return errors.New("CheckpointProcessor: checkpoint submission halted")
+	}
+
 	cp.Logger.Info(infoMsgCpReceivedCheckpointToRootChainRequest, "eventBytes", eventBytes, "blockHeight", blockHeight)
 
 	var event sdk.StringEvent

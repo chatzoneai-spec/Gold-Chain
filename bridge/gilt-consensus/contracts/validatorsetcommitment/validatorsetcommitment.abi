@@ -1,0 +1,43 @@
+[
+  {
+    "inputs": [],
+    "name": "commitmentEpoch",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPower",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getSigners",
+    "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "consensusAddress", "type": "address"}],
+    "name": "getSignerPower",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint256", "name": "newEpoch", "type": "uint256"},
+      {"internalType": "address[]", "name": "consensusAddresses", "type": "address[]"},
+      {"internalType": "bytes[]", "name": "voteKeys", "type": "bytes[]"},
+      {"internalType": "uint256[]", "name": "votingPowers", "type": "uint256[]"},
+      {"internalType": "uint256[3][]", "name": "sigs", "type": "uint256[3][]"}
+    ],
+    "name": "submitCommitment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

@@ -1990,12 +1990,6 @@ func (p *Parlia) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 			Service:   service,
 			Public:    false,
 		},
-		{
-			Namespace: "bor",
-			Version:   "1.0",
-			Service:   service,
-			Public:    false,
-		},
 	}
 }
 

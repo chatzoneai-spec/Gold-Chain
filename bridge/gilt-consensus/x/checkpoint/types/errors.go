@@ -1,10 +1,13 @@
 package types
 
 import (
+	"errors"
+
 	errorsmod "cosmossdk.io/errors"
 )
 
 var (
+	ErrFailedToQueryChild = errors.New("failed to query child chain")
 	ErrInvalidMsg              = errorsmod.Register(ModuleName, 2, "invalid message")
 	ErrNoCheckpointFound       = errorsmod.Register(ModuleName, 4, "checkpoint not found")
 	ErrDiscontinuousCheckpoint = errorsmod.Register(ModuleName, 7, "checkpoint is not in continuity")

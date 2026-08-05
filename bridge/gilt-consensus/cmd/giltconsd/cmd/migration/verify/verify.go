@@ -10,7 +10,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"cosmossdk.io/log"
@@ -21,8 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	"github.com/cosmos/cosmos-sdk/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/google/uuid"
 
 	giltconsensusApp "github.com/giltchain/gilt-consensus/app"
 	"github.com/giltchain/gilt-consensus/cmd/giltconsd/cmd/migration/utils"
@@ -30,7 +27,7 @@ import (
 )
 
 // RunMigrationVerification verifies the migration from GiltConsensus v1 to GiltConsensus v2 by consuming the migrated genesis file
-// and verifying balances, validators, gilt spans, clerk events, and checkpoints
+// and verifying balances, validators, clerk events, and checkpoints
 func RunMigrationVerification(hv1GenesisPath, hv2GenesisPath string, logger log.Logger) error {
 	globalStart := time.Now()
 	logger.Info("Verifying migration")
@@ -75,26 +72,12 @@ func RunMigrationVerification(hv1GenesisPath, hv2GenesisPath string, logger log.
 	}
 	logger.Info(fmt.Sprintf("verifyClerkEventRecords took %.2f minutes", time.Since(start).Minutes()))
 
-	logger.Info("Verify spans")
-	start = time.Now()
-	if err := verifySpans(ctx, app, hv1Genesis); err != nil {
-		return err
-	}
-	logger.Info(fmt.Sprintf("verifySpans took %.2f minutes", time.Since(start).Minutes()))
-
 	logger.Info("Verify checkpoints")
 	start = time.Now()
 	if err := verifyCheckpoints(ctx, app, hv1Genesis); err != nil {
 		return err
 	}
 	logger.Info(fmt.Sprintf("verifyCheckpoints took %.2f minutes", time.Since(start).Minutes()))
-
-	logger.Info("Verify milestones")
-	start = time.Now()
-	if err := verifyMilestones(ctx, app, hv1Genesis); err != nil {
-		return err
-	}
-	logger.Info(fmt.Sprintf("verifyMilestones took %.2f minutes", time.Since(start).Minutes()))
 
 	logger.Info("Verify validators")
 	start = time.Now()
@@ -324,7 +307,6 @@ func verifyDataLists(hv1Path, hv2Path string, logger log.Logger) error {
 	}
 	keyMappings := []keyMapping{
 		{"auth", "accounts", "auth", "accounts"},
-		{"gilt", "spans", "gilt", "spans"},
 		{"clerk", "event_records", "clerk", "event_records"},
 		{"clerk", "record_sequences", "clerk", "record_sequences"},
 		{"checkpoint", "checkpoints", "checkpoint", "checkpoints"},
@@ -473,89 +455,6 @@ func verifyCheckpoints(ctx types.Context, app *giltconsensusApp.GiltConsensusApp
 		if int(dbCheckpoints[i].Id) != i+1 {
 			return fmt.Errorf("checkpoints in v2 have non-sequential IDs at index %d", i)
 		}
-	}
-
-	return nil
-}
-
-// verifySpans verifies the gilt data in the genesis files by comparing the data in both versions
-func verifySpans(ctx types.Context, app *giltconsensusApp.GiltConsensusApp, hv1Genesis map[string]interface{}) error {
-	hv1SpansData, ok := hv1Genesis["app_state"].(map[string]interface{})["gilt"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("gilt module not found in v1 app_state")
-	}
-
-	spansRaw := hv1SpansData["spans"]
-	var spans []interface{}
-	if spansRaw != nil {
-		spans, ok = spansRaw.([]interface{})
-		if !ok {
-			return fmt.Errorf("spans key is not a list")
-		}
-	}
-	// If spansRaw == nil → spans stays nil → OK (zero spans)
-
-	// Index v1 spans by span_id
-	v1SpansByID := make(map[int]map[string]interface{})
-	for _, s := range spans {
-		m, ok := s.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("span is not a valid map")
-		}
-		idStr, ok := m["span_id"].(string)
-		if !ok {
-			return fmt.Errorf("span_id is not a string")
-		}
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			return fmt.Errorf("failed to convert span_id to int: %w", err)
-		}
-		v1SpansByID[id] = m
-	}
-
-	// Load spans from DB
-	dbSpans, err := app.GiltKeeper.GetAllSpans(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get spans from v2 database: %w", err)
-	}
-
-	// Compare each db span to v1 span by ID
-	for i, span := range dbSpans {
-		v1Span, ok := v1SpansByID[int(span.Id)]
-		if !ok {
-			return fmt.Errorf("span with ID %d not found in v1 genesis", span.Id)
-		}
-
-		startBlock, err := strconv.Atoi(v1Span["start_block"].(string))
-		if err != nil {
-			return fmt.Errorf("failed to convert start_block to int: %w", err)
-		}
-		if int(span.StartBlock) != startBlock {
-			return fmt.Errorf("start_block mismatch for span ID %d: expected %d, got %d", span.Id, startBlock, span.StartBlock)
-		}
-
-		endBlock, err := strconv.Atoi(v1Span["end_block"].(string))
-		if err != nil {
-			return fmt.Errorf("failed to convert end_block to int: %w", err)
-		}
-		if int(span.EndBlock) != endBlock {
-			return fmt.Errorf("end_block mismatch for span ID %d: expected %d, got %d", span.Id, endBlock, span.EndBlock)
-		}
-
-		// Check sequential and ordered spans
-		if i > 0 {
-			if dbSpans[i-1].StartBlock >= span.StartBlock {
-				return fmt.Errorf("spans in v2 are not ordered by growing start_block at index %d", i)
-			}
-		}
-		if int(span.Id) != i {
-			return fmt.Errorf("spans in v2 have non-sequential IDs at index %d: expected %d, got %d", i, i, span.Id)
-		}
-	}
-
-	// Ensure no extra spans exist in v1
-	if len(v1SpansByID) != len(dbSpans) {
-		return fmt.Errorf("span count mismatch: v1 has %d, v2 has %d", len(v1SpansByID), len(dbSpans))
 	}
 
 	return nil
@@ -867,103 +766,4 @@ type validatorBasicInfo struct {
 	signer string
 	nonce  uint64
 	jailed bool
-}
-
-// verifyMilestones verifies the milestones in the genesis files by comparing the data in both versions
-func verifyMilestones(ctx types.Context, app *giltconsensusApp.GiltConsensusApp, hv1Genesis map[string]interface{}) error {
-	checkpointModule, ok := hv1Genesis["app_state"].(map[string]interface{})["checkpoint"]
-	if !ok {
-		return fmt.Errorf("checkpoint module not found in app_state")
-	}
-
-	checkpointData, ok := checkpointModule.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("failed to cast checkpoint module data")
-	}
-
-	milestonesRaw := checkpointData["milestones"]
-	var milestones []interface{}
-	if milestonesRaw != nil {
-		milestones, ok = milestonesRaw.([]interface{})
-		if !ok {
-			return fmt.Errorf("milestones key not a list")
-		}
-	}
-
-	utils.SortByStartBlock(milestones)
-
-	// Get and sort V2 milestones by startBlock
-	dbMilestones, err := app.MilestoneKeeper.GetMilestones(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get milestones from v2 database: %w", err)
-	}
-	sort.Slice(dbMilestones, func(i, j int) bool {
-		return dbMilestones[i].StartBlock < dbMilestones[j].StartBlock
-	})
-
-	// Compare the milestones one by one
-	if len(milestones) != len(dbMilestones) {
-		return fmt.Errorf("number of milestones mismatch: v1 has %d, v2 has %d", len(milestones), len(dbMilestones))
-	}
-
-	for i := 0; i < len(dbMilestones); i++ {
-		milestone := milestones[i].(map[string]interface{})
-		dbMilestone := dbMilestones[i]
-
-		startBlock, err := strconv.Atoi(milestone["start_block"].(string))
-		if err != nil {
-			return fmt.Errorf("failed to convert start_block to int: %w", err)
-		}
-		if int(dbMilestone.StartBlock) != startBlock {
-			return fmt.Errorf("mismatch in milestone start block at index %d: expected %d, got %d", i, startBlock, dbMilestone.StartBlock)
-		}
-
-		endBlock, err := strconv.Atoi(milestone["end_block"].(string))
-		if err != nil {
-			return fmt.Errorf("failed to convert end_block to int: %w", err)
-		}
-		if int(dbMilestone.EndBlock) != endBlock {
-			return fmt.Errorf("mismatch in milestone end block at index %d: expected %d, got %d", i, endBlock, dbMilestone.EndBlock)
-		}
-
-		if dbMilestone.Proposer != milestone["proposer"].(string) {
-			return fmt.Errorf("mismatch in milestone proposer at index %d: expected %s, got %s", i, milestone["proposer"], dbMilestone.Proposer)
-		}
-
-		hashBytes, err := hex.DecodeString(milestone["hash"].(string)[2:])
-		if err != nil {
-			return fmt.Errorf("failed to decode root_hash at index %d: %w", i, err)
-		}
-		if !bytes.Equal(dbMilestone.Hash, hashBytes) {
-			return fmt.Errorf("mismatch in milestone root hash at index %d: expected %x, got %x", i, hashBytes, dbMilestone.Hash)
-		}
-
-		if dbMilestone.MilestoneId != milestone["milestone_id"].(string) {
-			return fmt.Errorf("mismatch in milestone id at index %d: expected %s, got %s", i, milestone["milestone_id"], dbMilestone.MilestoneId)
-		}
-
-		// validate that milestoneID is composed by `UUID - HexAddressOfTheProposer`
-		splitMilestoneID := strings.Split(dbMilestone.MilestoneId, " - ")
-		if len(splitMilestoneID) != 2 {
-			return fmt.Errorf("invalid milestoneID %s, it should be composed by `UUID - HexAddressOfTheProposer`", splitMilestoneID)
-		}
-
-		_, err = uuid.Parse(splitMilestoneID[0])
-		if err != nil {
-			return fmt.Errorf("invalid milestoneID, first part is not a valid uuid %s", splitMilestoneID[0])
-		}
-
-		if !common.IsHexAddress(splitMilestoneID[1]) {
-			return fmt.Errorf("invalid milestoneID, second part is not a valid address %s", splitMilestoneID[1])
-		}
-	}
-
-	// Check V2 ordering and sequential ID
-	for i := 1; i < len(dbMilestones); i++ {
-		if dbMilestones[i-1].StartBlock >= dbMilestones[i].StartBlock {
-			return fmt.Errorf("milestones in v2 are not ordered by growing start_block at index %d", i)
-		}
-	}
-
-	return nil
 }

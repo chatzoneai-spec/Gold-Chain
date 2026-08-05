@@ -32,7 +32,6 @@ import (
 	"github.com/giltchain/gilt-consensus/helper"
 	checkpointTypes "github.com/giltchain/gilt-consensus/x/checkpoint/types"
 	clerkTypes "github.com/giltchain/gilt-consensus/x/clerk/types"
-	milestoneTypes "github.com/giltchain/gilt-consensus/x/milestone/types"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
 	topupTypes "github.com/giltchain/gilt-consensus/x/topup/types"
 )
@@ -152,7 +151,6 @@ func makeCodec() (codec.Codec, error) {
 	cryptocodec.RegisterInterfaces(ir)
 	authTypes.RegisterInterfaces(ir)
 	checkpointTypes.RegisterInterfaces(ir)
-	milestoneTypes.RegisterInterfaces(ir)
 	clerkTypes.RegisterInterfaces(ir)
 	stakeTypes.RegisterInterfaces(ir)
 	topupTypes.RegisterInterfaces(ir)

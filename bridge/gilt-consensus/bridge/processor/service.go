@@ -67,10 +67,10 @@ func NewProcessorService(
 	clerkProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "clerk", clerkProcessor)
 	clerkProcessor.cliCtx = txBroadcaster.CliCtx
 
-	// initialize span processor
-	spanProcessor := &SpanProcessor{}
-	spanProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "span", spanProcessor)
-	spanProcessor.cliCtx = txBroadcaster.CliCtx
+	// initialize commitment processor
+	commitmentProcessor := NewCommitmentProcessor()
+	commitmentProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "commitment", commitmentProcessor)
+	commitmentProcessor.cliCtx = txBroadcaster.CliCtx
 
 	//
 	// Select processors
@@ -85,7 +85,7 @@ func NewProcessorService(
 			checkpointProcessor,
 			clerkProcessor,
 			feeProcessor,
-			spanProcessor,
+			commitmentProcessor,
 		)
 	} else {
 		for _, service := range onlyServices {
@@ -96,8 +96,8 @@ func NewProcessorService(
 				processorService.processors = append(processorService.processors, clerkProcessor)
 			case "fee":
 				processorService.processors = append(processorService.processors, feeProcessor)
-			case "span":
-				processorService.processors = append(processorService.processors, spanProcessor)
+			case "commitment":
+				processorService.processors = append(processorService.processors, commitmentProcessor)
 			}
 		}
 	}

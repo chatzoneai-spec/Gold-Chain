@@ -1,5 +1,7 @@
 pragma solidity 0.5.17;
 
+pragma experimental ABIEncoderV2;
+
 import {IERC20} from "../../common/oz/token/ERC20/IERC20.sol";
 import {Math} from "../../common/oz/math/Math.sol";
 import {SafeMath} from "../../common/oz/math/SafeMath.sol";
@@ -19,6 +21,7 @@ import {IGovernance} from "../../common/governance/IGovernance.sol";
 import {Initializable} from "../../common/mixin/Initializable.sol";
 import {StakeManagerExtension} from "./StakeManagerExtension.sol";
 import {IGiltMigration} from "../../common/misc/IGiltMigration.sol";
+import {IValidatorSetCommitment} from "../IValidatorSetCommitment.sol";
 
 contract StakeManager is
     StakeManagerStorage,
@@ -36,12 +39,6 @@ contract StakeManager is
         uint256[] unsignedValidators;
         address[] validators;
         uint256 totalValidators;
-    }
-
-    struct UnstakedValidatorsContext {
-        uint256 deactivationEpoch;
-        uint256[] deactivatedValidators;
-        uint256 validatorIndex;
     }
 
     modifier onlyStaker(uint256 validatorId) {
@@ -77,7 +74,8 @@ contract StakeManager is
         address _owner,
         address _extensionCode,
         address _token,
-        address _migration
+        address _migration,
+        address _validatorSetCommitment
     ) external initializer {
         require(isContract(_extensionCode), "extension impl incorrect");
         extensionCode = _extensionCode;
@@ -87,6 +85,9 @@ contract StakeManager is
         token = IERC20(_token);
         tokenLegacyToken = IERC20(_tokenLegacy);
         migration = IGiltMigration(_migration);
+        if (_validatorSetCommitment != address(0)) {
+            validatorSetCommitment = IValidatorSetCommitment(_validatorSetCommitment);
+        }
         NFTContract = StakingNFT(_NFTContract);
         logger = StakingInfo(_stakingLogger);
         validatorShareFactory = ValidatorShareFactory(_validatorShareFactory);
@@ -194,17 +195,9 @@ contract StakeManager is
         delegationEnabled = enabled;
     }
 
-    // Housekeeping function. @todo remove later
-    function forceUnstake(uint256 validatorId) external onlyGovernance {
-        _unstake(validatorId, currentEpoch, false);
-    }
-
-    function forceUnstakePOL(uint256 validatorId) external onlyGovernance {
-        _unstake(validatorId, currentEpoch, true);
-    }
-
-    function setCurrentEpoch(uint256 _currentEpoch) external onlyGovernance {
-        currentEpoch = _currentEpoch;
+    function setValidatorSetCommitment(address _commitment) external onlyGovernance {
+        require(_commitment != address(0), "zero commitment");
+        validatorSetCommitment = IValidatorSetCommitment(_commitment);
     }
 
     /**
@@ -252,10 +245,6 @@ contract StakeManager is
                 StakeManagerExtension(extensionCode).migrateValidatorsData.selector, validatorIdFrom, validatorIdTo
             )
         );
-    }
-
-    function insertSigners(address[] memory _signers) public onlyOwner {
-        signers = _signers;
     }
 
     /**
@@ -562,71 +551,50 @@ contract StakeManager is
         address proposer,
         uint256[3][] calldata sigs
     ) external onlyRootChain returns (uint256) {
-        uint256 _currentEpoch = currentEpoch;
+        IValidatorSetCommitment commitment = validatorSetCommitment;
+        require(address(commitment) != address(0), "no commitment");
+
+        uint256 committedTotalPower = commitment.totalPower();
+        require(committedTotalPower > 0, "empty committed set");
+
+        address[] memory committedSigners = commitment.getSigners();
         uint256 signedStakePower;
         address lastAdd;
-        uint256 totalStakers = validatorState.stakerCount;
 
         UnsignedValidatorsContext memory unsignedCtx;
-        unsignedCtx.unsignedValidators = new uint256[](signers.length + totalStakers);
-        unsignedCtx.validators = signers;
+        unsignedCtx.unsignedValidators = new uint256[](committedSigners.length);
+        unsignedCtx.validators = committedSigners;
         unsignedCtx.validatorIndex = 0;
-        unsignedCtx.totalValidators = signers.length;
-
-        UnstakedValidatorsContext memory unstakeCtx;
-        unstakeCtx.deactivatedValidators = new uint256[](signers.length + totalStakers);
+        unsignedCtx.totalValidators = committedSigners.length;
 
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signer = ECVerify.ecrecovery(voteHash, sigs[i]);
 
             if (signer == lastAdd) {
-                // if signer signs twice, just skip this signature
                 continue;
             }
 
-            if (signer < lastAdd) {
-                // if signatures are out of order - break out, it is not possible to keep track of unsigned validators
-                break;
+            require(signer > lastAdd, "signatures not sorted ascending");
+
+            if (!commitment.isActiveSigner(signer)) {
+                continue;
             }
 
-            uint256 validatorId = signerToValidator[signer];
-            uint256 amount = validators[validatorId].amount;
-            Status status = validators[validatorId].status;
-            unstakeCtx.deactivationEpoch = validators[validatorId].deactivationEpoch;
-
-            if (_isValidator(status, amount, unstakeCtx.deactivationEpoch, _currentEpoch)) {
-                lastAdd = signer;
-
-                signedStakePower = signedStakePower.add(validators[validatorId].delegatedAmount).add(amount);
-
-                if (unstakeCtx.deactivationEpoch != 0) {
-                    // this validator not a part of signers list anymore
-                    unstakeCtx.deactivatedValidators[unstakeCtx.validatorIndex] = validatorId;
-                    unstakeCtx.validatorIndex++;
-                } else {
-                    unsignedCtx = _fillUnsignedValidators(unsignedCtx, signer);
-                }
-            } else if (status == Status.Locked) {
-                // TODO fix double unsignedValidators appearance
-                // make sure that jailed validator doesn't get his rewards too
-                unsignedCtx.unsignedValidators[unsignedCtx.unsignedValidatorIndex] = validatorId;
-                unsignedCtx.unsignedValidatorIndex++;
-                unsignedCtx.validatorIndex++;
-            }
+            lastAdd = signer;
+            signedStakePower = signedStakePower.add(commitment.getSignerPower(signer));
+            unsignedCtx = _fillUnsignedValidators(unsignedCtx, signer);
         }
 
-        // find the rest of validators without signature
         unsignedCtx = _fillUnsignedValidators(unsignedCtx, address(0));
 
         return _increaseRewardAndAssertConsensus(
             blockInterval,
             proposer,
             signedStakePower,
+            committedTotalPower,
             stateRoot,
             unsignedCtx.unsignedValidators,
-            unsignedCtx.unsignedValidatorIndex,
-            unstakeCtx.deactivatedValidators,
-            unstakeCtx.validatorIndex
+            unsignedCtx.unsignedValidatorIndex
         );
     }
 
@@ -784,16 +752,14 @@ contract StakeManager is
         uint256 blockInterval,
         address proposer,
         uint256 signedStakePower,
+        uint256 committedTotalPower,
         bytes32 stateRoot,
         uint256[] memory unsignedValidators,
-        uint256 totalUnsignedValidators,
-        uint256[] memory deactivatedValidators,
-        uint256 totalDeactivatedValidators
+        uint256 totalUnsignedValidators
     ) private returns (uint256) {
-        uint256 currentTotalStake = validatorState.amount;
-        require(signedStakePower >= currentTotalStake.mul(2).div(3).add(1), "2/3+1 non-majority!");
+        require(signedStakePower >= committedTotalPower.mul(2).div(3).add(1), "2/3+1 non-majority!");
 
-        uint256 reward = _calculateCheckpointReward(blockInterval, signedStakePower, currentTotalStake);
+        uint256 reward = _calculateCheckpointReward(blockInterval, signedStakePower, committedTotalPower);
 
         uint256 _proposerBonus = reward.mul(proposerBonus).div(MAX_PROPOSER_BONUS);
         uint256 proposerId = signerToValidator[proposer];
@@ -813,10 +779,6 @@ contract StakeManager is
 
         // distribute rewards between signed validators
         rewardPerStake = newRewardPerStake;
-
-        // evaluate rewards for unstaked validators to ensure they get the reward for signing during their
-        // deactivationEpoch
-        _updateValidatorsRewards(deactivatedValidators, totalDeactivatedValidators, newRewardPerStake);
 
         _finalizeCommit();
         return reward;

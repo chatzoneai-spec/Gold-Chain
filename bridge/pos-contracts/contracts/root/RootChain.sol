@@ -15,10 +15,6 @@ contract RootChain is RootChainStorage, IRootChain {
         _;
     }
 
-    function submitHeaderBlock(bytes calldata data, bytes calldata sigs) external {
-        revert();
-    }
-
     function submitCheckpoint(bytes calldata data, uint256[3][] calldata sigs) external {
         (address proposer, uint256 start, uint256 end, bytes32 rootHash, bytes32 accountHash, uint256 _giltChainID) =
             abi.decode(data, (address, uint256, uint256, bytes32, bytes32, uint256));
@@ -85,17 +81,6 @@ contract RootChain is RootChainStorage, IRootChain {
 
         headerBlocks[_nextHeaderBlock] = headerBlock;
         return true;
-    }
-
-    // Housekeeping function. @todo remove later
-    function setNextHeaderBlock(uint256 _value) public onlyOwner {
-        require(_value % MAX_DEPOSITS == 0, "Invalid value");
-        for (uint256 i = _value; i < _nextHeaderBlock; i += MAX_DEPOSITS) {
-            delete headerBlocks[i];
-        }
-        _nextHeaderBlock = _value;
-        _blockDepositId = 1;
-        emit ResetHeaderBlock(msg.sender, _nextHeaderBlock);
     }
 
     // Housekeeping function. @todo remove later

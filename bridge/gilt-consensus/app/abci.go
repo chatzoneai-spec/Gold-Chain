@@ -16,16 +16,12 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/giltchain/gilt-consensus/common/strutil"
 	"github.com/giltchain/gilt-consensus/helper"
 	"github.com/giltchain/gilt-consensus/metrics"
 	"github.com/giltchain/gilt-consensus/sidetxs"
 	giltconsensusTypes "github.com/giltchain/gilt-consensus/types"
-	giltTypes "github.com/giltchain/gilt-consensus/x/gilt/types"
 	"github.com/giltchain/gilt-consensus/x/checkpoint/types"
 	checkpointTypes "github.com/giltchain/gilt-consensus/x/checkpoint/types"
-	milestoneAbci "github.com/giltchain/gilt-consensus/x/milestone/abci"
-	milestoneTypes "github.com/giltchain/gilt-consensus/x/milestone/types"
 	stakeTypes "github.com/giltchain/gilt-consensus/x/stake/types"
 )
 
@@ -43,7 +39,7 @@ func (app *GiltConsensusApp) NewPrepareProposalHandler() sdk.PrepareProposalHand
 			return nil, err
 		}
 
-		validVoteExtensions, err := FilterVoteExtensions(ctx, req.Height, req.LocalLastCommit.Votes, req.LocalLastCommit.Round, validatorSet, app.MilestoneKeeper, logger)
+		validVoteExtensions, err := FilterVoteExtensions(ctx, req.Height, req.LocalLastCommit.Votes, req.LocalLastCommit.Round, validatorSet, logger)
 		if err != nil {
 			logger.Error("Error occurred while filtering VEs in PrepareProposal", err)
 			return nil, err
@@ -81,30 +77,6 @@ func (app *GiltConsensusApp) NewPrepareProposalHandler() sdk.PrepareProposalHand
 
 			// ensure we allow transactions with only one side msg inside
 			if sidetxs.CountSideHandlers(app.sideTxCfg, tx) > 1 {
-				continue
-			}
-
-			// Check for MsgVoteProducers and apply VEBLOP validation during PrepareProposal
-			shouldSkip := false
-			msgs := tx.GetMsgs()
-			for _, msg := range msgs {
-				if _, ok := msg.(*giltTypes.MsgVoteProducers); ok {
-					if err := app.GiltKeeper.CanVoteProducers(ctx); err != nil {
-						logger.Info("Skipping MsgVoteProducers in PrepareProposal", "error", err)
-						shouldSkip = true
-						break
-					}
-				}
-				if _, ok := msg.(*giltTypes.MsgSetProducerDowntime); ok {
-					if err := app.GiltKeeper.CanSetProducerDowntime(sdk.UnwrapSDKContext(ctx)); err != nil {
-						logger.Info("Skipping MsgSetProducerDowntime in PrepareProposal", "error", err)
-						shouldSkip = true
-						break
-					}
-				}
-			}
-
-			if shouldSkip {
 				continue
 			}
 
@@ -164,7 +136,7 @@ func (app *GiltConsensusApp) NewProcessProposalHandler() sdk.ProcessProposalHand
 		}
 
 		// validate the vote extensions
-		if err := ValidateVoteExtensions(ctx, req.Height, extCommitInfo.Votes, req.ProposedLastCommit.Round, validatorSet, app.MilestoneKeeper); err != nil {
+		if err := ValidateVoteExtensions(ctx, req.Height, extCommitInfo.Votes, req.ProposedLastCommit.Round, validatorSet); err != nil {
 			logger.Error("Invalid vote extension, rejecting proposal", "error", err)
 			return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
 		}
@@ -184,23 +156,6 @@ func (app *GiltConsensusApp) NewProcessProposalHandler() sdk.ProcessProposalHand
 			// ensure we allow transactions with only one side msg inside
 			if sidetxs.CountSideHandlers(app.sideTxCfg, txn) > 1 {
 				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-			}
-
-			// Check for MsgVoteProducers and apply VEBLOP validation to reject malicious proposals
-			msgs := txn.GetMsgs()
-			for _, msg := range msgs {
-				if _, ok := msg.(*giltTypes.MsgVoteProducers); ok {
-					if err := app.GiltKeeper.CanVoteProducers(ctx); err != nil {
-						logger.Error("Rejecting proposal with invalid MsgVoteProducers", "error", err)
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-				}
-				if _, ok := msg.(*giltTypes.MsgSetProducerDowntime); ok {
-					if err := app.GiltKeeper.CanSetProducerDowntime(sdk.UnwrapSDKContext(ctx)); err != nil {
-						logger.Error("Rejecting proposal with invalid MsgSetProducerDowntime", "error", err)
-						return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
-					}
-				}
 			}
 
 			if _, err := app.ProcessProposalVerifyTx(tx); err != nil {
@@ -320,41 +275,9 @@ func (app *GiltConsensusApp) ExtendVoteHandler() sdk.ExtendVoteHandler {
 		}
 
 		vt := sidetxs.VoteExtension{
-			Height:               req.Height,
-			BlockHash:            req.Hash,
-			SideTxResponses:      sideTxRes,
-			MilestoneProposition: nil,
-		}
-
-		getBlockAuthor := func(ctx sdk.Context, blockNumber uint64) ([]common.Address, error) {
-			return app.GiltKeeper.GetProducersByBlockNumber(ctx, blockNumber)
-		}
-
-		milestoneProp, err := milestoneAbci.GenMilestoneProposition(ctx, &app.GiltKeeper, &app.MilestoneKeeper, app.caller, getBlockAuthor)
-		if err != nil {
-			if errors.Is(err, milestoneAbci.ErrNoNewHeadersFound) {
-				logger.Debug("No new headers found for generating milestone proposition, continuing without it")
-			} else {
-				logger.Error("Error occurred while generating milestone proposition", "error", err)
-			}
-			// We still want to participate in the consensus even if we fail to generate the milestone proposition
-		} else if milestoneProp != nil {
-			if err := milestoneAbci.ValidateMilestoneProposition(ctx, &app.MilestoneKeeper, milestoneProp); err != nil {
-				logger.Error("Invalid milestone proposition generated",
-					"startBlock", milestoneProp.StartBlockNumber,
-					"endBlock", milestoneProp.StartBlockNumber+uint64(len(milestoneProp.BlockHashes)-1),
-					"blockHashes", strutil.HashesToString(milestoneProp.BlockHashes),
-					"error", err,
-				)
-				// We don't want to halt consensus because of an invalid milestone proposition
-			} else {
-				vt.MilestoneProposition = milestoneProp
-				logger.Info("Generated a new milestone proposition",
-					"startBlock", milestoneProp.StartBlockNumber,
-					"endBlock", milestoneProp.StartBlockNumber+uint64(len(milestoneProp.BlockHashes)-1),
-					"blockHashes", strutil.HashesToString(milestoneProp.BlockHashes),
-				)
-			}
+			Height:          req.Height,
+			BlockHash:       req.Hash,
+			SideTxResponses: sideTxRes,
 		}
 
 		bz, err = vt.Marshal()
@@ -425,11 +348,6 @@ func (app *GiltConsensusApp) VerifyVoteExtensionHandler() sdk.VerifyVoteExtensio
 			logger.Error(giltconsensusTypes.ErrAlertNonRpVoteExtensionRejected, "validator", valAddr, "error", err)
 		}
 
-		if err := milestoneAbci.ValidateMilestoneProposition(ctx, &app.MilestoneKeeper, voteExtension.MilestoneProposition); err != nil {
-			logger.Error(giltconsensusTypes.ErrAlertMilestonePropositionVoteExtensionRejected, "validator", valAddr, "error", err)
-			return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_REJECT}, nil
-		}
-
 		return &abci.ResponseVerifyVoteExtension{Status: abci.ResponseVerifyVoteExtension_ACCEPT}, nil
 	}
 }
@@ -444,24 +362,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 	// handle the case when the VEs are disabled starting from the next block
 	if err := checkIfVoteExtensionsDisabled(ctx, req.Height+1); err != nil {
 		return nil, err
-	}
-
-	milestoneDeletionHeight := helper.GetMilestoneDeletionHeight()
-	if req.Height == milestoneDeletionHeight && milestoneDeletionHeight != -1 {
-		// Delete faulty milestone if exists.
-		milestoneNumber := helper.GetFaultyMilestoneNumber()
-		milestone, err := app.MilestoneKeeper.GetMilestoneByNumber(ctx, milestoneNumber)
-		if err != nil {
-			logger.Error("Error occurred while getting milestone by number", "error", err, "milestoneNumber", milestoneNumber)
-		}
-		if milestone != nil {
-			if app.MilestoneKeeper.IsFaultyMilestone(*milestone) {
-				if err := app.MilestoneKeeper.DeleteMilestone(ctx, milestoneNumber); err != nil {
-					logger.Error("Error occurred while deleting milestone", "error", err, "milestoneNumber", milestoneNumber)
-				}
-			}
-		}
-		logger.Info("Deleted milestone matching target condition", "milestone", milestoneNumber)
 	}
 
 	// Extract ExtendedVoteInfo encoded at the beginning of txs bytes
@@ -507,150 +407,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 	if err != nil {
 		logger.Error("Error occurred while getting validator set for height in PreBlocker", "error", err, "height", req.Height)
 		return nil, err
-	}
-
-	hasMilestone, err := app.MilestoneKeeper.HasMilestone(ctx)
-	if err != nil {
-		logger.Error("Error occurred while checking for the last milestone", "error", err)
-		return nil, err
-	}
-
-	var lastEndBlock *uint64 = nil
-	var lastEndHash []byte
-	if hasMilestone {
-		lastMilestone, err := app.MilestoneKeeper.GetLastMilestone(ctx)
-		if err != nil {
-			logger.Error("Error occurred while fetching the last milestone", "error", err)
-			return nil, err
-		}
-		lastEndBlock = &lastMilestone.EndBlock
-		lastEndHash = lastMilestone.Hash
-	}
-
-	totalVotingPower := validatorSet.GetTotalVotingPower()
-	majorityVP := totalVotingPower*2/3 + 1
-
-	majorityMilestone, aggregatedProposers, proposer, supportingValidatorIDs, err := milestoneAbci.GetMajorityMilestoneProposition(
-		ctx,
-		validatorSet,
-		extVoteInfo,
-		majorityVP,
-		logger,
-		lastEndBlock,
-		lastEndHash,
-	)
-	if err != nil {
-		logger.Error("Error occurred while getting majority milestone proposition", "error", err)
-		return nil, err
-	}
-
-	isValidMilestone := false
-	if majorityMilestone != nil {
-		var lastSpanGiltConsensusBlock uint64
-		if helper.IsRio(majorityMilestone.StartBlockNumber) {
-			lastSpanGiltConsensusBlock, err = app.GiltKeeper.GetLastSpanBlock(ctx)
-			if err != nil {
-				logger.Warn("Error occurred while getting last span block", "error", err)
-			}
-		}
-
-		if err := milestoneAbci.ValidateMilestoneProposition(ctx, &app.MilestoneKeeper, majorityMilestone); err != nil {
-			logger.Error("Invalid milestone proposition", "error", err, "height", req.Height, "majorityMilestone", majorityMilestone)
-			// We don't want to halt consensus because of an invalid majority milestone proposition
-		} else if helper.IsRio(majorityMilestone.StartBlockNumber) && ctx.BlockHeight() == int64(lastSpanGiltConsensusBlock)+1 {
-			logger.Info("Last span was created in the previous block, skipping milestone addition", "lastSpanGiltConsensusBlock", lastSpanGiltConsensusBlock, "currentBlock", ctx.BlockHeight())
-		} else {
-			logger.Info("2/3rd majority reached on milestone proposition",
-				"startBlock", majorityMilestone.StartBlockNumber,
-				"endBlock", majorityMilestone.StartBlockNumber+uint64(len(majorityMilestone.BlockHashes)-1),
-				strutil.HashesToString(majorityMilestone.BlockHashes),
-			)
-			isValidMilestone = true
-		}
-	}
-
-	if isValidMilestone {
-		params, err := app.ChainManagerKeeper.GetParams(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting chain manager params", "error", err)
-			return nil, err
-		}
-
-		addMilestoneCtx, msCache := app.cacheTxContext(ctx)
-
-		if err := app.MilestoneKeeper.AddMilestone(addMilestoneCtx, milestoneTypes.Milestone{
-			Proposer:        proposer,
-			Hash:            majorityMilestone.BlockHashes[len(majorityMilestone.BlockHashes)-1],
-			StartBlock:      majorityMilestone.StartBlockNumber,
-			EndBlock:        majorityMilestone.StartBlockNumber + uint64(len(majorityMilestone.BlockHashes)-1),
-			GiltChainId:      params.ChainParams.GiltChainId,
-			MilestoneId:     common.Bytes2Hex(aggregatedProposers),
-			Timestamp:       uint64(ctx.BlockTime().Unix()),
-			TotalDifficulty: majorityMilestone.BlockTds[len(majorityMilestone.BlockHashes)-1],
-		}); err != nil {
-			logger.Error("Error occurred while adding milestone", "error", err)
-			return nil, err
-		}
-
-		lastSpan, err := app.GiltKeeper.GetLastSpan(ctx)
-		if err != nil {
-			logger.Error("Error occurred while fetching the last span", "error", err)
-			return nil, err
-		}
-
-		if helper.IsRio(lastSpan.StartBlock + 1) {
-			err = app.MilestoneKeeper.SetLastMilestoneBlock(addMilestoneCtx, uint64(ctx.BlockHeight()))
-			if err != nil {
-				logger.Error("Error while setting last milestone block in store", "err", err)
-				return nil, err
-			}
-
-			err = app.GiltKeeper.UpdateValidatorPerformanceScore(addMilestoneCtx, supportingValidatorIDs, uint64(len(majorityMilestone.BlockHashes)))
-			if err != nil {
-				logger.Error("Error occurred while updating validator performance score", "error", err)
-				return nil, err
-			}
-
-			if err := app.updateBlockProducerStatus(addMilestoneCtx, supportingValidatorIDs); err != nil {
-				logger.Error("Error occurred while updating block producer status", "error", err)
-				return nil, err
-			}
-		}
-
-		if err := app.checkAndAddFutureSpan(addMilestoneCtx, majorityMilestone, lastSpan, supportingValidatorIDs); err != nil {
-			return nil, err
-		}
-		msCache.Write()
-	} else {
-		// If we can't reach the 2/3 majority, we need to check if there is at least 1/3 of the voting power supporting a new milestone
-		minMajorityVP := totalVotingPower/3 + 1
-
-		pendingMilestone, _, _, _, err := milestoneAbci.GetMajorityMilestoneProposition(
-			ctx,
-			validatorSet,
-			extVoteInfo,
-			minMajorityVP,
-			logger,
-			lastEndBlock,
-			lastEndHash,
-		)
-		if err != nil {
-			logger.Error("Error occurred while getting 33% majority milestone proposition", "error", err)
-			return nil, err
-		}
-
-		if pendingMilestone == nil {
-			logger.Debug("No milestone proposition majority found, checking for span rotation")
-			if err := app.checkAndRotateCurrentSpan(ctx); err != nil {
-				return nil, err
-			}
-		} else {
-			logger.Info("1/3rd voting power found on milestone proposition, skipping span rotation",
-				"startBlock", pendingMilestone.StartBlockNumber,
-				"endBlock", pendingMilestone.StartBlockNumber+uint64(len(pendingMilestone.BlockHashes)-1),
-				strutil.HashesToString(pendingMilestone.BlockHashes),
-			)
-		}
 	}
 
 	// tally votes
@@ -752,181 +508,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 	}
 
 	return app.ModuleManager.PreBlock(ctx)
-}
-
-func (app *GiltConsensusApp) updateBlockProducerStatus(ctx sdk.Context, supportingProducerIDs map[uint64]struct{}) error {
-	if err := app.GiltKeeper.UpdateLatestActiveProducer(ctx, supportingProducerIDs); err != nil {
-		app.Logger().Error("Error occurred while updating latest active producer", "error", err)
-		return err
-	}
-
-	if err := app.GiltKeeper.ClearLatestFailedProducer(ctx); err != nil {
-		app.Logger().Error("Error occurred while clearing latest failed producer", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func (app *GiltConsensusApp) checkAndAddFutureSpan(ctx sdk.Context, majorityMilestone *milestoneTypes.MilestoneProposition, lastSpan giltTypes.Span, supportingValidatorIDs map[uint64]struct{}) error {
-	logger := app.Logger()
-
-	if majorityMilestone.StartBlockNumber+uint64(len(majorityMilestone.BlockHashes)-1) >= lastSpan.StartBlock && helper.IsRio(lastSpan.EndBlock+1) {
-		logger.Info("New milestone's end block reached or exceeded the last span's start block, creating a new veblop span",
-			"lastSpanId", lastSpan.Id,
-			"lastSpanStartBlock", lastSpan.StartBlock,
-			"lastSpanEndBlock", lastSpan.EndBlock,
-			"milestoneStartBlock", majorityMilestone.StartBlockNumber,
-			"milestoneEndBlock", majorityMilestone.StartBlockNumber+uint64(len(majorityMilestone.BlockHashes)-1),
-		)
-
-		params, err := app.GiltKeeper.GetParams(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting gilt params", "error", err)
-			return err
-		}
-
-		endBlock := lastSpan.EndBlock + params.SpanDuration
-
-		currentProducer, err := app.GiltKeeper.FindCurrentProducerID(ctx, lastSpan.EndBlock)
-		if err != nil {
-			logger.Error("Error occurred while finding current producer", "error", err)
-			return err
-		}
-
-		err = app.GiltKeeper.AddNewVeBlopSpan(ctx, currentProducer, lastSpan.EndBlock+1, endBlock, lastSpan.GiltChainId, supportingValidatorIDs, uint64(ctx.BlockHeight()))
-		if err != nil {
-			logger.Error("Error occurred while adding new veblop span", "error", err)
-			return err
-		}
-
-		if err := app.updateBlockProducerStatus(ctx, supportingValidatorIDs); err != nil {
-			logger.Error("Error occurred while updating block producer status", "error", err)
-			return err
-		}
-	}
-
-	return nil
-}
-
-// checkAndRotateCurrentSpan checks if a new veblop span should be created when no milestone has been proposed for a while.
-// This is to ensure liveness and rotate producers.
-func (app *GiltConsensusApp) checkAndRotateCurrentSpan(ctx sdk.Context) error {
-	logger := app.Logger()
-
-	hasMilestone, err := app.MilestoneKeeper.HasMilestone(ctx)
-	if err != nil {
-		logger.Error("Error occurred while checking for the last milestone", "error", err)
-		return err
-	}
-
-	var lastMilestone *milestoneTypes.Milestone
-
-	if hasMilestone {
-		lastMilestone, err = app.MilestoneKeeper.GetLastMilestone(ctx)
-		if err != nil {
-			logger.Error("Error occurred while fetching the last milestone", "error", err)
-			return err
-		}
-	}
-
-	lastMilestoneBlock, err := app.MilestoneKeeper.GetLastMilestoneBlock(ctx)
-	if err != nil {
-		logger.Error("Error occurred while fetching the last milestone block", "error", err)
-		return err
-	}
-
-	if lastMilestoneBlock == 0 {
-		lastMilestoneBlock = uint64(ctx.BlockHeight())
-	}
-
-	diff := ctx.BlockHeight() - int64(lastMilestoneBlock)
-
-	if lastMilestone != nil && lastMilestoneBlock != 0 && diff > helper.GetChangeProducerThreshold(ctx) && helper.IsRio(lastMilestone.EndBlock+1) {
-		logger.Info("Block finalization time is greater than the change producer threshold, creating a new veblop span",
-			"lastMilestoneStartBlock", lastMilestone.StartBlock,
-			"lastMilestoneEndBlock", lastMilestone.EndBlock,
-			"lastMilestoneGiltConsensusBlock", lastMilestoneBlock,
-			"currentBlock", ctx.BlockHeight(),
-			"diff", diff,
-		)
-
-		addSpanCtx, spanCache := app.cacheTxContext(ctx)
-
-		latestActiveProducer, err := app.GiltKeeper.GetLatestActiveProducer(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting latest active producer", "error", err)
-			return err
-		}
-
-		lastSpan, err := app.GiltKeeper.GetLastSpan(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting last span", "error", err)
-			return err
-		}
-
-		params, err := app.GiltKeeper.GetParams(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting gilt params", "error", err)
-			return err
-		}
-
-		endBlock := lastSpan.EndBlock
-
-		for endBlock-lastMilestone.EndBlock > 2*params.SpanDuration {
-			endBlock -= params.SpanDuration
-		}
-
-		if endBlock <= lastMilestone.EndBlock {
-			endBlock = lastSpan.EndBlock
-			for endBlock <= lastMilestone.EndBlock {
-				endBlock += params.SpanDuration
-			}
-		}
-
-		currentProducer, err := app.GiltKeeper.FindCurrentProducerID(ctx, lastMilestone.EndBlock+1)
-		if err != nil {
-			logger.Error("Error occurred while finding current producer", "error", err)
-			return err
-		}
-
-		latestFailedProducer, err := app.GiltKeeper.GetLatestFailedProducer(ctx)
-		if err != nil {
-			logger.Error("Error occurred while getting latest failed producer", "error", err)
-			return err
-		}
-
-		for producerID := range latestFailedProducer {
-			delete(latestActiveProducer, producerID)
-		}
-
-		delete(latestActiveProducer, currentProducer)
-
-		err = app.GiltKeeper.AddNewVeBlopSpan(addSpanCtx, currentProducer, lastMilestone.EndBlock+1, endBlock, lastMilestone.GiltChainId, latestActiveProducer, uint64(ctx.BlockHeight()))
-		if err != nil {
-			logger.Warn("Error occurred while adding new veblop span", "error", err)
-		} else {
-			// update the last milestone block to a future block height to avoid immediately rotating the span in the next block
-			err = app.MilestoneKeeper.SetLastMilestoneBlock(addSpanCtx, uint64(ctx.BlockHeight())+helper.GetSpanRotationBuffer(ctx))
-			if err != nil {
-				logger.Error("Error occurred while setting last milestone block", "error", err)
-				return err
-			}
-
-			err = app.GiltKeeper.AddLatestFailedProducer(addSpanCtx, currentProducer)
-			if err != nil {
-				logger.Error("Error occurred while adding latest failed producer", "error", err)
-				return err
-			}
-
-			logger.Info("Span rotated due to the current producer's ineffectiveness", "currentProducerID", currentProducer)
-		}
-
-		if err == nil {
-			spanCache.Write()
-		}
-	}
-	return nil
 }
 
 func (app *GiltConsensusApp) getValidatorSetForHeight(ctx sdk.Context, height int64) (*stakeTypes.ValidatorSet, error) {

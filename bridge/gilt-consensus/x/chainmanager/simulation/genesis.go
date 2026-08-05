@@ -23,7 +23,6 @@ const (
 	StakingInfoAddress       = "staking_info_address"
 	StateSenderAddress       = "state_sender_address"
 	StateReceiverAddress     = "state_receiver_address"
-	ValidatorSetAddress      = "validator_set_address"
 )
 
 // genMainChainTxConfirmations returns randomized mainChain tx confirmations
@@ -62,7 +61,6 @@ func RandomizedGenState(simState *module.SimulationState) {
 		stakingInfoAddress       string
 		stateSenderAddress       string
 		stateReceiverAddress     string
-		validatorSetAddress      string
 	)
 
 	simState.AppParams.GetOrGenerate(MainChainTxConfirmations, &mainChainTxConfirmations, simState.Rand, func(r *rand.Rand) {
@@ -101,10 +99,6 @@ func RandomizedGenState(simState *module.SimulationState) {
 		stateReceiverAddress = genAddress(r)
 	})
 
-	simState.AppParams.GetOrGenerate(ValidatorSetAddress, &validatorSetAddress, simState.Rand, func(r *rand.Rand) {
-		validatorSetAddress = genAddress(r)
-	})
-
 	chainParams := types.ChainParams{
 		GiltChainId:          giltChainID,
 		GiltConsensusChainId: giltconsensusChainID,
@@ -113,7 +107,6 @@ func RandomizedGenState(simState *module.SimulationState) {
 		StakingInfoAddress:   stakingInfoAddress,
 		StateSenderAddress:   stateSenderAddress,
 		StateReceiverAddress: stateReceiverAddress,
-		ValidatorSetAddress:  validatorSetAddress,
 	}
 
 	params := types.NewParams(mainChainTxConfirmations, giltChainTxConfirmations, chainParams)
