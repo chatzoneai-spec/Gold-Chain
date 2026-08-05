@@ -2085,7 +2085,9 @@ func (p *Parlia) distributeIncoming(val common.Address, state vm.StateDB, header
 	}
 
 	if err := p.distributeInflation(val, state, header, chain, txs, receipts, receivedTxs, usedGas, mining, tracer); err != nil {
-		return err
+		// Inflation distribution must not halt block production. A failed day-boundary
+		// inflation system tx previously stalled all validators at the next block.
+		log.Error("distribute inflation failed; continuing block production", "err", err, "validator", val, "block", header.Number)
 	}
 
 	balance := state.GetBalance(consensus.SystemAddress)

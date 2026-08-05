@@ -278,6 +278,19 @@ function buildStakeHubStorage(config) {
   setStorage(storage, STAKE_HUB_SLOTS.stakeTokenBPrimaryId, hex32(gold.tokenIds.paxgBacked));
   setStorage(storage, STAKE_HUB_SLOTS.stakeTokenBSecondaryId, hex32(gold.tokenIds.xautBacked));
 
+  const allowlistEnabled = staking.validatorAllowlistEnabled !== false;
+  setStorage(storage, STAKE_HUB_SLOTS.validatorAllowlistEnabled, encodeBool(allowlistEnabled));
+  const allowlist = Array.isArray(staking.validatorAllowlist) && staking.validatorAllowlist.length > 0
+    ? staking.validatorAllowlist
+    : (config.validators || []).map((validator) => validator.consensusAddress);
+  for (const account of allowlist) {
+    setStorage(
+      storage,
+      addressMappingSlot(account, STAKE_HUB_SLOTS.validatorAllowlist),
+      encodeBool(true),
+    );
+  }
+
   return storage;
 }
 

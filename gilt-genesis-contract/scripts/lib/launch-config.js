@@ -230,6 +230,13 @@ function validateLaunchConfig(config) {
   assert(staking.goldRewardSource === "GILT_PLUS_FEES", "GOLD staking rewards must be GILT_PLUS_FEES", errors);
   assert(Number.isInteger(staking.goldRewardSplitBps) && staking.goldRewardSplitBps > 0, "GOLD reward split must be non-zero", errors);
   assert(staking.ratioEnabledAtLaunch === false, "ratio enforcement must be off at launch", errors);
+  assert(staking.validatorAllowlistEnabled === true, "validator allowlist mode must be enabled at launch", errors);
+  if (staking.validatorAllowlist !== undefined) {
+    assert(Array.isArray(staking.validatorAllowlist) && staking.validatorAllowlist.length > 0, "validatorAllowlist must be a non-empty address list when provided", errors);
+    for (const [index, account] of staking.validatorAllowlist.entries()) {
+      assert(isAddress(account), `staking.validatorAllowlist[${index}] must be an address`, errors);
+    }
+  }
   assertPositiveInteger(staking.transferGasLimit, "transferGasLimit", errors);
   assertPositiveInteger(staking.unbondPeriodSeconds, "unbondPeriodSeconds", errors);
   assertPositiveInteger(staking.redelegateFeeRate, "redelegateFeeRate", errors);

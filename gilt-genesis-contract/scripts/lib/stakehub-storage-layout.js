@@ -27,6 +27,8 @@ const STAKE_HUB_SLOTS = {
   pendingSystemRewardAutoRetryCap: 104,
   stakeTokenBPrimaryId: 128,
   stakeTokenBSecondaryId: 129,
+  validatorAllowlistEnabled: 138,
+  validatorAllowlist: 139,
 };
 
 const STAKE_HUB_STORAGE_LAYOUT_MANIFEST = {
@@ -58,6 +60,8 @@ const STAKE_HUB_STORAGE_LAYOUT_MANIFEST = {
   pendingSystemRewardAutoRetryCap: STAKE_HUB_SLOTS.pendingSystemRewardAutoRetryCap,
   stakeTokenBPrimaryId: STAKE_HUB_SLOTS.stakeTokenBPrimaryId,
   stakeTokenBSecondaryId: STAKE_HUB_SLOTS.stakeTokenBSecondaryId,
+  validatorAllowlistEnabled: STAKE_HUB_SLOTS.validatorAllowlistEnabled,
+  validatorAllowlist: STAKE_HUB_SLOTS.validatorAllowlist,
 };
 
 function verifyStakeHubStorageLayout(storageLayout) {

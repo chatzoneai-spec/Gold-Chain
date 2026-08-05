@@ -100,6 +100,8 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     error InvalidInflationMintAmount(uint256 expectedAmount, uint256 actualAmount);
     error InflationAlreadyRecorded(uint256 dayIndex);
     error StakeHubModuleDirectCall();
+    error NotOnValidatorAllowlist();
+    error ValidatorAllowlistAlreadyOpen();
 
     /*----------------- storage -----------------*/
     uint8 internal _receiveFundStatus;
@@ -249,6 +251,10 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     // validator operator => token B reward accumulator frozen at token B migration cutover
     mapping(address => uint256) internal _tokenBRewardAccAtMigration;
 
+    // validator entry control: when true, createValidator requires allowlist membership
+    bool public validatorAllowlistEnabled;
+    mapping(address => bool) public validatorAllowlist;
+
     /*----------------- structs and events -----------------*/
     struct StakeMigrationPackage {
         address operatorAddress; // the operator address of the target validator to delegate to
@@ -317,6 +323,8 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
         address indexed creditContract,
         bytes voteAddress
     );
+    event ValidatorAllowlistUpdated(address indexed account, bool allowed);
+    event ValidatorAllowlistModeUpdated(bool enabled);
     event StakeCreditInitialized(address indexed operatorAddress, address indexed creditContract);
     event ConsensusAddressEdited(address indexed operatorAddress, address indexed newConsensusAddress);
     event CommissionRateEdited(address indexed operatorAddress, uint64 newCommissionRate);

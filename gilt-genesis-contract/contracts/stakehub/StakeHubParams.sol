@@ -25,6 +25,26 @@ contract StakeHubParams is StakeHubCommon {
         revert UnknownParam(key, value);
     }
 
+    /// @notice Add or remove an operator from the validator allowlist. Only meaningful while allowlist mode is enabled.
+    function setValidatorAllowlist(
+        address account,
+        bool allowed
+    ) external onlyStakeHubDelegateCall onlyGov {
+        if (account == address(0)) revert InvalidValidator();
+        validatorAllowlist[account] = allowed;
+        emit ValidatorAllowlistUpdated(account, allowed);
+    }
+
+    /// @notice Enable/disable allowlist gating for createValidator.
+    /// @dev Miners/governance use this to open registration to anyone with min stake (current open mode).
+    function setValidatorAllowlistEnabled(
+        bool enabled
+    ) external onlyStakeHubDelegateCall onlyGov {
+        if (!enabled && !validatorAllowlistEnabled) revert ValidatorAllowlistAlreadyOpen();
+        validatorAllowlistEnabled = enabled;
+        emit ValidatorAllowlistModeUpdated(enabled);
+    }
+
     function _updateCoreParam(
         string calldata key,
         bytes calldata value
@@ -295,6 +315,13 @@ contract StakeHubParams is StakeHubCommon {
             (address newStakeTokenB, address reserveVault) = abi.decode(value, (address, address));
             _requireActiveGoldMigrationController(stakeTokenB, newStakeTokenB, reserveVault);
             _activateTokenBMigration(newStakeTokenB, reserveVault);
+            return true;
+        }
+        if (key.compareStrings("validatorAllowlistEnabled")) {
+            bool enabled = _boolParam(key, value);
+            if (!enabled && !validatorAllowlistEnabled) revert ValidatorAllowlistAlreadyOpen();
+            validatorAllowlistEnabled = enabled;
+            emit ValidatorAllowlistModeUpdated(enabled);
             return true;
         }
         return false;

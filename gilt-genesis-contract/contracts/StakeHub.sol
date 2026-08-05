@@ -46,6 +46,8 @@ contract StakeHub is StakeHubCommon {
         if (downtimeJailTime == 0) downtimeJailTime = 2 days;
         if (felonyJailTime == 0) felonyJailTime = 30 days;
         if (maxFelonyBetweenBreatheBlock == 0) maxFelonyBetweenBreatheBlock = 2;
+        // validatorAllowlistEnabled is set true via launch genesis storage for production.
+        // Tests leave it false (default) unless they explicitly enable allowlist mode.
         if (stakeWeightA == 0) stakeWeightA = POWER_SCALE;
         if (stakeWeightB == 0) stakeWeightB = 6_000;
         if (maxBPowerRatioBps == 0) maxBPowerRatioBps = MAX_RATIO_BPS;
@@ -196,7 +198,11 @@ contract StakeHub is StakeHubCommon {
             return STAKE_HUB_MIGRATION_MODULE_ADDR;
         }
 
-        if (selector == StakeHubParams.updateParam.selector) {
+        if (
+            selector == StakeHubParams.updateParam.selector
+                || selector == StakeHubParams.setValidatorAllowlist.selector
+                || selector == StakeHubParams.setValidatorAllowlistEnabled.selector
+        ) {
             return STAKE_HUB_PARAMS_MODULE_ADDR;
         }
 
