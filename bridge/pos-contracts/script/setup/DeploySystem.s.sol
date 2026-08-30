@@ -18,6 +18,7 @@ pragma solidity ^0.8.0;
 // import {GiltMigration} from "../../contracts/common/misc/GiltMigration.sol";
 // import {ERC20Permit} from "../../contracts/common/tokens/ERC20Permit.sol";
 // import {TestToken} from "../../contracts/common/tokens/TestToken.sol";
+// import {WGILT} from "../../contracts/common/tokens/WGILT.sol";
 
 // import {RootChain} from "../../contracts/root/RootChain.sol";
 // import {RootChainProxy} from "../../contracts/root/RootChainProxy.sol";
@@ -39,7 +40,7 @@ import {Governance} from "../../scripts/helpers/interfaces/Governance.generated.
 import {GovernanceProxy} from "../../scripts/helpers/interfaces/GovernanceProxy.generated.sol";
 import {GiltMigration} from "../../scripts/helpers/interfaces/GiltMigration.generated.sol";
 import {ERC20Permit} from "../../scripts/helpers/interfaces/ERC20Permit.generated.sol";
-import {TestToken} from "../../scripts/helpers/interfaces/TestToken.generated.sol";
+import {WGILT} from "../../scripts/helpers/interfaces/WGILT.generated.sol";
 
 import {RootChain} from "../../scripts/helpers/interfaces/RootChain.generated.sol";
 import {RootChainProxy} from "../../scripts/helpers/interfaces/RootChainProxy.generated.sol";
@@ -60,7 +61,7 @@ contract DeploySystem is Script, ArtifactPath {
     StakeManager stakeManager;
     Registry registry;
     ERC20Permit polToken;
-    TestToken legacyToken;
+    WGILT legacyToken;
     GiltMigration giltMigration;
     StakingInfo stakingInfo;
     EventsHub eventsHub;
@@ -99,7 +100,8 @@ contract DeploySystem is Script, ArtifactPath {
         address validatorShare = deployCode(ValidatorSharePath);
         updateRegistryContractMap("validatorShare", validatorShare);
 
-        legacyToken = TestToken(deployCode(TestTokenPath, abi.encode("Gilt Token", "GILT")));
+        // §9.1: root validator stake token is Ethereum-side wGILT (stakeFor / tokenLegacyToken path).
+        legacyToken = WGILT(deployCode(WGILTPath));
         polToken = ERC20Permit(deployCode(ERC20PermitPath, abi.encode("Pol Token", "POL", "1.1.0")));
         updateRegistryContractMap("pol", address(polToken));
 

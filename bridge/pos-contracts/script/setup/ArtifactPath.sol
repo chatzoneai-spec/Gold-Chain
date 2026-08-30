@@ -17,6 +17,7 @@ abstract contract ArtifactPath {
     string GiltMigrationPath = "out/GiltMigration.sol/GiltMigration.json";
     string ERC20PermitPath = "out/ERC20Permit.sol/ERC20Permit.json";
     string TestTokenPath = "out/TestToken.sol/TestToken.json";
+    string WGILTPath = "out/WGILT.sol/WGILT.json";
     string RootChainPath = "out/RootChain.sol/RootChain.json";
     string RootChainProxyPath = "out/RootChainProxy.sol/RootChainProxy.json";
     string StateSenderPath = "out/StateSender.sol/StateSender.json";

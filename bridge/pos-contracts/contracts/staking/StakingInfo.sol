@@ -167,6 +167,16 @@ contract StakingInfo is Ownable {
         uint256 indexed oldCommissionRate
     );
 
+    /// @dev Emitted when slashing is recorded on the root chain.
+    /// @param nonce slash tick nonce for orchestrator replay protection.
+    /// @param amount slashed amount.
+    event Slashed(uint256 indexed nonce, uint256 indexed amount);
+
+    /// @dev Emitted when a validator is released from jail.
+    /// @param validatorId unique integer to identify a validator.
+    /// @param signer validator address.
+    event UnJailed(uint256 indexed validatorId, address indexed signer);
+
     Registry public registry;
 
     modifier onlyValidatorContract(uint256 validatorId) {
@@ -350,6 +360,14 @@ contract StakingInfo is Ownable {
 
     function logClaimFee(address user, uint256 fee) public onlyStakeManager {
         emit ClaimFee(user, fee);
+    }
+
+    function logSlashed(uint256 nonce, uint256 amount) public onlyStakeManager {
+        emit Slashed(nonce, amount);
+    }
+
+    function logUnJailed(uint256 validatorId, address signer) public onlyStakeManager {
+        emit UnJailed(validatorId, signer);
     }
 
     function getStakerDetails(uint256 validatorId)
