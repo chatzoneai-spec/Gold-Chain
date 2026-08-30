@@ -191,6 +191,16 @@ func (p *Parlia) fetchStateSyncEvents(ctx context.Context, fromID uint64, to tim
 	return events, nil
 }
 
+func freezeStateSyncFetchError(err error, hasReceivedStateSyncTx bool) error {
+	if err == nil {
+		return nil
+	}
+	if hasReceivedStateSyncTx {
+		return errors.New("unexpected state sync tx while state sync fetch failed")
+	}
+	return nil
+}
+
 func validateStateSyncEvent(event *stateSyncEventRecord, lastStateID uint64, to time.Time, chainID string) error {
 	if lastStateID+1 != event.ID {
 		return fmt.Errorf("non-sequential state sync id: got %d want %d", event.ID, lastStateID+1)
@@ -233,7 +243,8 @@ func (p *Parlia) commitStateSyncs(
 	log.Info("Fetching bridge state sync events", "fromID", lastStateID+1, "to", cutoff.Format(time.RFC3339))
 	events, err := p.fetchStateSyncEvents(ctx, lastStateID+1, cutoff)
 	if err != nil {
-		return err
+		log.Warn("Bridge state sync fetch failed; freezing root stake updates at last snapshot", "err", err)
+		return freezeStateSyncFetchError(err, hasReceivedStateSyncTx)
 	}
 	if len(events) == 0 {
 		if hasReceivedStateSyncTx {

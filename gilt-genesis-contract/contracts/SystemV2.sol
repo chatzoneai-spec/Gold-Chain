@@ -18,6 +18,7 @@ contract SystemV2 {
     address internal constant GOVERNOR_ADDR = 0x0000000000000000000000000000000000002004;
     address internal constant GOV_TOKEN_ADDR = 0x0000000000000000000000000000000000002005;
     address internal constant TIMELOCK_ADDR = 0x0000000000000000000000000000000000002006;
+    address internal constant STATE_RECEIVER_ADDR = 0x0000000000000000000000000000000000003001;
 
     /*----------------- errors -----------------*/
     // @notice signature: 0x97b88354
@@ -72,6 +73,11 @@ contract SystemV2 {
 
     modifier onlyStakeHub() {
         if (msg.sender != STAKE_HUB_ADDR) revert OnlySystemContract(STAKE_HUB_ADDR);
+        _;
+    }
+
+    modifier onlyStateReceiver() {
+        if (msg.sender != STATE_RECEIVER_ADDR) revert OnlySystemContract(STATE_RECEIVER_ADDR);
         _;
     }
 }

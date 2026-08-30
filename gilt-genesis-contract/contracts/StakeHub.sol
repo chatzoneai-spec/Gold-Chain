@@ -8,6 +8,7 @@ import "./stakehub/StakeHubInflation.sol";
 import "./stakehub/StakeHubMigration.sol";
 import "./stakehub/StakeHubParams.sol";
 import "./stakehub/StakeHubRewards.sol";
+import "./stakehub/StakeHubRootStake.sol";
 import "./stakehub/StakeHubSlashing.sol";
 import "./stakehub/StakeHubValidatorViews.sol";
 import "./stakehub/StakeHubValidators.sol";
@@ -22,6 +23,7 @@ contract StakeHub is StakeHubCommon {
     address public constant STAKE_HUB_MIGRATION_MODULE_ADDR = 0x0000000000000000000000000000000000002016;
     address public constant STAKE_HUB_PARAMS_MODULE_ADDR = 0x0000000000000000000000000000000000002017;
     address public constant STAKE_HUB_VALIDATOR_VIEWS_MODULE_ADDR = 0x0000000000000000000000000000000000002018;
+    address public constant STAKE_HUB_ROOT_STAKE_MODULE_ADDR = 0x0000000000000000000000000000000000002019;
 
     error UnknownStakeHubSelector(bytes4 selector);
     error StakeHubModuleUnavailable(address module);
@@ -84,6 +86,14 @@ contract StakeHub is StakeHubCommon {
         bytes calldata
     ) external view onlyCrossChainContract {
         revert("deprecated");
+    }
+
+    function onStateReceive(
+        uint256,
+        bytes calldata
+    ) external {
+        if (msg.sender != STATE_RECEIVER_ADDR) revert OnlySystemContract(STATE_RECEIVER_ADDR);
+        _delegateTo(STAKE_HUB_ROOT_STAKE_MODULE_ADDR);
     }
 
     function moduleForSelector(
@@ -198,6 +208,14 @@ contract StakeHub is StakeHubCommon {
 
         if (selector == StakeHubParams.updateParam.selector) {
             return STAKE_HUB_PARAMS_MODULE_ADDR;
+        }
+
+        if (
+            selector == StakeHubRootStake.onStateReceive.selector
+                || selector == StakeHubRootStake.getRootStakeRecord.selector
+                || selector == StakeHubRootStake.getRootStakeAmountByConsensus.selector
+        ) {
+            return STAKE_HUB_ROOT_STAKE_MODULE_ADDR;
         }
 
         return address(0);

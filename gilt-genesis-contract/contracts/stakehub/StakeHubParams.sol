@@ -209,6 +209,10 @@ contract StakeHubParams is StakeHubCommon {
             tokenBRewardSplitBps = newTokenBRewardSplitBps;
             return true;
         }
+        if (key.compareStrings("rootAnchoredGiltStakingEnabled")) {
+            rootAnchoredGiltStakingEnabled = _boolParam(key, value);
+            return true;
+        }
         return false;
     }
 

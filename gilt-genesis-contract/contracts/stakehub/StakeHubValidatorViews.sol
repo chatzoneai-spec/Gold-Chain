@@ -134,7 +134,7 @@ contract StakeHubValidatorViews is StakeHubCommon {
             if (valInfo.jailed) {
                 votingPowers[i] = 0;
             } else {
-                uint256 stakeA = IStakeCredit(valInfo.creditContract).totalPooledGILT();
+                uint256 stakeA = _electionStakeA(operatorAddress, valInfo.consensusAddress, valInfo.creditContract);
                 uint256 stakeB = _activeTotalDelegatedTokenB(operatorAddress);
                 votingPowers[i] = _effectiveVotingPower(stakeA, stakeB);
             }

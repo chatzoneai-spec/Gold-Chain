@@ -249,6 +249,12 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     // validator operator => token B reward accumulator frozen at token B migration cutover
     mapping(address => uint256) internal _tokenBRewardAccAtMigration;
 
+    // root-anchored GILT stake snapshot (finalized root StakingInfo events via state sync)
+    bool public rootAnchoredGiltStakingEnabled;
+    uint256 public rootStakeSnapshotTotal;
+    mapping(uint256 => RootStakeRecord) internal _rootStakeByValidatorId;
+    mapping(address => uint256) internal _rootValidatorIdBySigner;
+
     /*----------------- structs and events -----------------*/
     struct StakeMigrationPackage {
         address operatorAddress; // the operator address of the target validator to delegate to
@@ -303,6 +309,13 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
         uint256 tokenId;
         uint256 tokenBAmount;
         uint256 unlockTime;
+    }
+
+    struct RootStakeRecord {
+        address signer;
+        uint256 amount;
+        uint256 nonce;
+        uint8 status;
     }
 
     enum SlashType {
@@ -425,6 +438,15 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     // Events for adding and removing NodeIDs.
     event NodeIDAdded(address indexed validator, bytes32 nodeID);
     event NodeIDRemoved(address indexed validator, bytes32 nodeID);
+    event RootStakeSnapshotApplied(
+        uint256 indexed stateId,
+        uint256 indexed validatorId,
+        address indexed signer,
+        uint256 amount,
+        uint256 nonce,
+        uint8 status
+    );
+    event RootStakeDivergenceDetected(uint256 rootTotal, uint256 trackedTotal, address indexed reporter);
 
     event MigrateSuccess(
         address indexed operatorAddress, address indexed delegator, uint256 shares, uint256 giltAmount

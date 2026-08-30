@@ -358,4 +358,40 @@ abstract contract StakeHubCommon is StakeHubStorage {
             stakeA, stakeB, stakeWeightA, stakeWeightB, POWER_SCALE, ratioEnabled, minBtoARatioBps, maxBPowerRatioBps
         );
     }
+
+    function _electionStakeA(
+        address operatorAddress,
+        address consensusAddress,
+        address creditContract
+    ) internal view returns (uint256) {
+        if (!rootAnchoredGiltStakingEnabled) {
+            return IStakeCredit(creditContract).totalPooledGILT();
+        }
+        operatorAddress;
+        return _rootAnchoredStakeAmount(consensusAddress);
+    }
+
+    function _rootAnchoredStakeAmount(
+        address consensusAddress
+    ) internal view returns (uint256) {
+        uint256 validatorId = _rootValidatorIdBySigner[consensusAddress];
+        if (validatorId == 0) {
+            return 0;
+        }
+        RootStakeRecord storage rec = _rootStakeByValidatorId[validatorId];
+        if (rec.status != 0) {
+            return 0;
+        }
+        return rec.amount;
+    }
+
+    function _nativeGiltStakeTotal() internal view returns (uint256) {
+        uint256 totalLength = _validatorSet.length();
+        uint256 total;
+        for (uint256 i; i < totalLength; ++i) {
+            address operatorAddress = _validatorSet.at(i);
+            total += IStakeCredit(_validators[operatorAddress].creditContract).totalPooledGILT();
+        }
+        return total;
+    }
 }
