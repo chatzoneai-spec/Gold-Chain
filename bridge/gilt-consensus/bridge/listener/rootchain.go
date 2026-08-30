@@ -164,6 +164,7 @@ func (rl *RootChainListener) ProcessHeader(newHeader *blockHeader) {
 				"from", chunkFrom,
 				"to", chunkTo,
 			)
+			helper.FreezeRootAnchoredStakeRead()
 			// do not advance the cursor, as we want to retry this range on the next header
 			return
 		}

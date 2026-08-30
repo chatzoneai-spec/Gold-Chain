@@ -62,6 +62,11 @@ func NewProcessorService(
 	feeProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "fee", feeProcessor)
 	feeProcessor.cliCtx = txBroadcaster.CliCtx
 
+	// initialize staking processor
+	stakingProcessor := NewStakingProcessor(&contractCaller.StakingInfoABI)
+	stakingProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "staking", stakingProcessor)
+	stakingProcessor.cliCtx = txBroadcaster.CliCtx
+
 	// initialize clerk processor
 	clerkProcessor := NewClerkProcessor(&contractCaller.StateSenderABI)
 	clerkProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "clerk", clerkProcessor)
@@ -85,6 +90,7 @@ func NewProcessorService(
 			checkpointProcessor,
 			clerkProcessor,
 			feeProcessor,
+			stakingProcessor,
 			commitmentProcessor,
 		)
 	} else {
@@ -96,6 +102,8 @@ func NewProcessorService(
 				processorService.processors = append(processorService.processors, clerkProcessor)
 			case "fee":
 				processorService.processors = append(processorService.processors, feeProcessor)
+			case "staking":
+				processorService.processors = append(processorService.processors, stakingProcessor)
 			case "commitment":
 				processorService.processors = append(processorService.processors, commitmentProcessor)
 			}

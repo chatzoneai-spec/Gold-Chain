@@ -158,10 +158,16 @@ func (msg MsgSignerUpdate) ValidateBasic() error {
 
 // NewMsgValidatorExit creates a new MsgValidatorExit instance.
 func NewMsgValidatorExit(from string, id uint64, nonce uint64) (*MsgValidatorExit, error) {
+	return NewMsgValidatorExitWithRootEpoch(from, id, nonce, 0)
+}
+
+// NewMsgValidatorExitWithRootEpoch creates a MsgValidatorExit with optional root deactivation epoch.
+func NewMsgValidatorExitWithRootEpoch(from string, id uint64, nonce uint64, rootDeactivationEpoch uint64) (*MsgValidatorExit, error) {
 	return &MsgValidatorExit{
-		From:  util.FormatAddress(from),
-		ValId: id,
-		Nonce: nonce,
+		From:                  util.FormatAddress(from),
+		ValId:                 id,
+		Nonce:                 nonce,
+		RootDeactivationEpoch: rootDeactivationEpoch,
 	}, nil
 }
 

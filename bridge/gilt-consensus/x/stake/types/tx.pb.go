@@ -480,9 +480,10 @@ var xxx_messageInfo_MsgSignerUpdateResponse proto.InternalMessageInfo
 
 // MsgValidatorExit defines the message for a validator exiting the network.
 type MsgValidatorExit struct {
-	From  string `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
-	ValId uint64 `protobuf:"varint,2,opt,name=val_id,json=valId,proto3" json:"val_id,omitempty"`
-	Nonce uint64 `protobuf:"varint,7,opt,name=nonce,proto3" json:"nonce,omitempty"`
+	From                  string `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	ValId                 uint64 `protobuf:"varint,2,opt,name=val_id,json=valId,proto3" json:"val_id,omitempty"`
+	Nonce                 uint64 `protobuf:"varint,7,opt,name=nonce,proto3" json:"nonce,omitempty"`
+	RootDeactivationEpoch uint64 `protobuf:"varint,8,opt,name=root_deactivation_epoch,json=rootDeactivationEpoch,proto3" json:"root_deactivation_epoch,omitempty"`
 }
 
 func (m *MsgValidatorExit) Reset()         { *m = MsgValidatorExit{} }
@@ -535,6 +536,13 @@ func (m *MsgValidatorExit) GetValId() uint64 {
 func (m *MsgValidatorExit) GetNonce() uint64 {
 	if m != nil {
 		return m.Nonce
+	}
+	return 0
+}
+
+func (m *MsgValidatorExit) GetRootDeactivationEpoch() uint64 {
+	if m != nil {
+		return m.RootDeactivationEpoch
 	}
 	return 0
 }
@@ -1635,6 +1643,11 @@ func (m *MsgValidatorExit) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x38
 	}
+	if m.RootDeactivationEpoch != 0 {
+		i = encodeVarintTx(dAtA, i, uint64(m.RootDeactivationEpoch))
+		i--
+		dAtA[i] = 0x40
+	}
 	if m.ValId != 0 {
 		i = encodeVarintTx(dAtA, i, uint64(m.ValId))
 		i--
@@ -2033,6 +2046,9 @@ func (m *MsgValidatorExit) Size() (n int) {
 	}
 	if m.Nonce != 0 {
 		n += 1 + sovTx(uint64(m.Nonce))
+	}
+	if m.RootDeactivationEpoch != 0 {
+		n += 1 + sovTx(uint64(m.RootDeactivationEpoch))
 	}
 	return n
 }
@@ -3180,6 +3196,25 @@ func (m *MsgValidatorExit) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.Nonce |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RootDeactivationEpoch", wireType)
+			}
+			m.RootDeactivationEpoch = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RootDeactivationEpoch |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

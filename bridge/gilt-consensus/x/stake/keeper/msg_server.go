@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	util "github.com/giltchain/gilt-consensus/common/hex"
+	"github.com/giltchain/gilt-consensus/helper"
 	"github.com/giltchain/gilt-consensus/metrics/api"
 	hmTypes "github.com/giltchain/gilt-consensus/types"
 	"github.com/giltchain/gilt-consensus/x/stake/types"
@@ -49,7 +50,12 @@ func (srv msgServer) ValidatorJoin(ctx context.Context, msg *types.MsgValidatorJ
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorJoinMethod, startTime, &err)
 
-	validator, err := srv.k.JoinValidator(ctx, msg)
+	var validator types.Validator
+	if helper.IsRootAnchoredStakeReadEnabled() {
+		validator, err = srv.k.JoinValidatorFromRoot(ctx, msg)
+	} else {
+		validator, err = srv.k.JoinValidator(ctx, msg)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +69,16 @@ func (srv msgServer) StakeUpdate(ctx context.Context, msg *types.MsgStakeUpdate)
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.StakeUpdateMethod, startTime, &err)
+
+	if helper.IsRootAnchoredStakeReadEnabled() {
+		validator, err := srv.k.SetValidatorStakeFromRoot(ctx, msg)
+		if err != nil {
+			return nil, err
+		}
+
+		emitValidatorEvent(ctx, types.EventTypeStakeUpdate, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
+		return &types.MsgStakeUpdateResponse{}, nil
+	}
 
 	validator, err := srv.k.IncreaseValidatorStake(ctx, msg)
 	if err != nil {
@@ -79,7 +95,12 @@ func (srv msgServer) SignerUpdate(ctx context.Context, msg *types.MsgSignerUpdat
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.SignerUpdateMethod, startTime, &err)
 
-	validator, err := srv.k.UpdateValidatorSigner(ctx, msg)
+	var validator types.Validator
+	if helper.IsRootAnchoredStakeReadEnabled() {
+		validator, err = srv.k.UpdateValidatorSignerFromRoot(ctx, msg)
+	} else {
+		validator, err = srv.k.UpdateValidatorSigner(ctx, msg)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +114,19 @@ func (srv msgServer) ValidatorExit(ctx context.Context, msg *types.MsgValidatorE
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorExitMethod, startTime, &err)
+
+	if helper.IsRootAnchoredStakeReadEnabled() {
+		if msg.RootDeactivationEpoch == 0 {
+			return nil, errorsmod.Wrap(types.ErrInvalidMsg, "missing root deactivation epoch")
+		}
+		validator, err := srv.k.ExitValidatorFromRoot(ctx, msg, msg.RootDeactivationEpoch)
+		if err != nil {
+			return nil, err
+		}
+
+		emitValidatorEvent(ctx, types.EventTypeValidatorExit, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
+		return &types.MsgValidatorExitResponse{}, nil
+	}
 
 	validator, err := srv.k.ExitValidator(ctx, msg)
 	if err != nil {

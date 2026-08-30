@@ -33,6 +33,14 @@ const (
 	StateSyncedEvent    = "StateSynced"
 	SlashedEvent        = "Slashed"
 	UnJailedEvent       = "UnJailed"
+	StakedEvent         = "Staked"
+	UnstakeInitEvent    = "UnstakeInit"
+	UnstakedEvent       = "Unstaked"
+	SignerChangeEvent   = "SignerChange"
+	StakeUpdateEvent    = "StakeUpdate"
+	RestakedEvent       = "Restaked"
+	ShareMintedEvent    = "ShareMinted"
+	ShareBurnedEvent    = "ShareBurned"
 
 	// error messages
 

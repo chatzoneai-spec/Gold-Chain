@@ -161,6 +161,7 @@ message MsgValidatorExit {
   reserved 3, 4, 5, 6;
   reserved "deactivation_epoch", "tx_hash", "log_index", "block_number";
   uint64 nonce = 7 [ (amino.dont_omitempty) = true ];
+  uint64 root_deactivation_epoch = 8 [ (amino.dont_omitempty) = true ];
 }
 
 // MsgValidatorExitResponse defines the response for MsgValidatorExit.
