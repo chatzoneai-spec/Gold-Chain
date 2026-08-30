@@ -1,12 +1,9 @@
 pragma solidity 0.5.17;
 
-pragma experimental ABIEncoderV2;
-
 import {IERC20} from "../../common/oz/token/ERC20/IERC20.sol";
 import {Math} from "../../common/oz/math/Math.sol";
 import {SafeMath} from "../../common/oz/math/SafeMath.sol";
 
-import {ECVerify} from "../../common/lib/ECVerify.sol";
 import {Merkle} from "../../common/lib/Merkle.sol";
 import {GovernanceLockable} from "../../common/mixin/GovernanceLockable.sol";
 import {DelegateProxyForwarder} from "../../common/misc/DelegateProxyForwarder.sol";
@@ -32,14 +29,6 @@ contract StakeManager is
 {
     using SafeMath for uint256;
     using Merkle for bytes32;
-
-    struct UnsignedValidatorsContext {
-        uint256 unsignedValidatorIndex;
-        uint256 validatorIndex;
-        uint256[] unsignedValidators;
-        address[] validators;
-        uint256 totalValidators;
-    }
 
     modifier onlyStaker(uint256 validatorId) {
         _assertStaker(validatorId);
@@ -367,7 +356,18 @@ contract StakeManager is
         bool acceptDelegation,
         bytes memory signerPubkey
     ) public onlyWhenUnlocked {
-        _stakeFor(user, amount, giltconsensusFee, acceptDelegation, signerPubkey, false);
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(
+                StakeManagerExtension(extensionCode).stakeFor.selector,
+                user,
+                amount,
+                giltconsensusFee,
+                acceptDelegation,
+                signerPubkey,
+                false
+            )
+        );
     }
 
     function stakeForPOL(
@@ -377,21 +377,18 @@ contract StakeManager is
         bool acceptDelegation,
         bytes memory signerPubkey
     ) public onlyWhenUnlocked {
-        _stakeFor(user, amount, giltconsensusFee, acceptDelegation, signerPubkey, true);
-    }
-
-    function _stakeFor(
-        address user,
-        uint256 amount,
-        uint256 giltconsensusFee,
-        bool acceptDelegation,
-        bytes memory signerPubkey,
-        bool pol
-    ) internal {
-        require(currentValidatorSetSize() < validatorThreshold, "no more slots");
-        require(amount >= minDeposit, "not enough deposit");
-        _transferAndTopUp(user, msg.sender, giltconsensusFee, amount, pol);
-        _stakeFor(user, amount, acceptDelegation, signerPubkey);
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(
+                StakeManagerExtension(extensionCode).stakeFor.selector,
+                user,
+                amount,
+                giltconsensusFee,
+                acceptDelegation,
+                signerPubkey,
+                true
+            )
+        );
     }
 
     function unstakeClaim(uint256 validatorId) public onlyStaker(validatorId) {
@@ -551,50 +548,17 @@ contract StakeManager is
         address proposer,
         uint256[3][] calldata sigs
     ) external onlyRootChain returns (uint256) {
-        IValidatorSetCommitment commitment = validatorSetCommitment;
-        require(address(commitment) != address(0), "no commitment");
-
-        uint256 committedTotalPower = commitment.totalPower();
-        require(committedTotalPower > 0, "empty committed set");
-
-        address[] memory committedSigners = commitment.getSigners();
-        uint256 signedStakePower;
-        address lastAdd;
-
-        UnsignedValidatorsContext memory unsignedCtx;
-        unsignedCtx.unsignedValidators = new uint256[](committedSigners.length);
-        unsignedCtx.validators = committedSigners;
-        unsignedCtx.validatorIndex = 0;
-        unsignedCtx.totalValidators = committedSigners.length;
-
-        for (uint256 i = 0; i < sigs.length; ++i) {
-            address signer = ECVerify.ecrecovery(voteHash, sigs[i]);
-
-            if (signer == lastAdd) {
-                continue;
-            }
-
-            require(signer > lastAdd, "signatures not sorted ascending");
-
-            if (!commitment.isActiveSigner(signer)) {
-                continue;
-            }
-
-            lastAdd = signer;
-            signedStakePower = signedStakePower.add(commitment.getSignerPower(signer));
-            unsignedCtx = _fillUnsignedValidators(unsignedCtx, signer);
-        }
-
-        unsignedCtx = _fillUnsignedValidators(unsignedCtx, address(0));
-
-        return _increaseRewardAndAssertConsensus(
-            blockInterval,
-            proposer,
-            signedStakePower,
-            committedTotalPower,
-            stateRoot,
-            unsignedCtx.unsignedValidators,
-            unsignedCtx.unsignedValidatorIndex
+        require(address(validatorSetCommitment) != address(0), "no commitment");
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(
+                StakeManagerExtension(extensionCode).checkSignatures.selector,
+                blockInterval,
+                voteHash,
+                stateRoot,
+                proposer,
+                sigs
+            )
         );
     }
 
@@ -674,200 +638,11 @@ contract StakeManager is
         return (amount > 0 && (deactivationEpoch == 0 || deactivationEpoch > _currentEpoch) && status == Status.Active);
     }
 
-    function _fillUnsignedValidators(
-        UnsignedValidatorsContext memory context,
-        address signer
-    ) private view returns (UnsignedValidatorsContext memory) {
-        while (context.validatorIndex < context.totalValidators && context.validators[context.validatorIndex] != signer)
-        {
-            context.unsignedValidators[context.unsignedValidatorIndex] =
-                signerToValidator[context.validators[context.validatorIndex]];
-            context.unsignedValidatorIndex++;
-            context.validatorIndex++;
-        }
-
-        context.validatorIndex++;
-        return context;
-    }
-
-    function _calculateCheckpointReward(
-        uint256 blockInterval,
-        uint256 signedStakePower,
-        uint256 currentTotalStake
-    ) internal returns (uint256) {
-        // checkpoint rewards are based on BlockInterval multiplied on `CHECKPOINT_REWARD`
-        // for bigger checkpoints reward is reduced by rewardDecreasePerCheckpoint for each subsequent interval
-
-        // for smaller checkpoints
-        // if interval is 50% of checkPointBlockInterval then reward R is half of `CHECKPOINT_REWARD`
-        // and then stakePower is 90% of currentValidatorSetTotalStake then final reward is 90% of R
-
-        uint256 targetBlockInterval = checkPointBlockInterval;
-        uint256 ckpReward = CHECKPOINT_REWARD;
-        uint256 fullIntervals = Math.min(blockInterval / targetBlockInterval, maxRewardedCheckpoints);
-
-        // only apply to full checkpoints
-        if (fullIntervals > 0 && fullIntervals != prevBlockInterval) {
-            if (prevBlockInterval != 0) {
-                // give more reward for faster and less for slower checkpoint
-                uint256 delta = (ckpReward * checkpointRewardDelta / CHK_REWARD_PRECISION);
-
-                if (prevBlockInterval > fullIntervals) {
-                    // checkpoint is faster
-                    ckpReward += delta;
-                } else {
-                    ckpReward -= delta;
-                }
-            }
-
-            prevBlockInterval = fullIntervals;
-        }
-
-        uint256 reward;
-
-        if (blockInterval > targetBlockInterval) {
-            // count how many full intervals
-            uint256 _rewardDecreasePerCheckpoint = rewardDecreasePerCheckpoint;
-
-            // calculate reward for full intervals
-            reward = ckpReward.mul(fullIntervals).sub(
-                ckpReward.mul(((fullIntervals - 1) * fullIntervals / 2).mul(_rewardDecreasePerCheckpoint)).div(
-                    CHK_REWARD_PRECISION
-                )
-            );
-            // adjust block interval, in case last interval is not full
-            blockInterval = blockInterval.sub(fullIntervals.mul(targetBlockInterval));
-            // adjust checkpoint reward by the amount it suppose to decrease
-            ckpReward =
-                ckpReward.sub(ckpReward.mul(fullIntervals).mul(_rewardDecreasePerCheckpoint).div(CHK_REWARD_PRECISION));
-        }
-
-        // give proportionally less for the rest
-        reward = reward.add(blockInterval.mul(ckpReward).div(targetBlockInterval));
-        reward = reward.mul(signedStakePower).div(currentTotalStake);
-        return reward;
-    }
-
-    function _increaseRewardAndAssertConsensus(
-        uint256 blockInterval,
-        address proposer,
-        uint256 signedStakePower,
-        uint256 committedTotalPower,
-        bytes32 stateRoot,
-        uint256[] memory unsignedValidators,
-        uint256 totalUnsignedValidators
-    ) private returns (uint256) {
-        require(signedStakePower >= committedTotalPower.mul(2).div(3).add(1), "2/3+1 non-majority!");
-
-        uint256 reward = _calculateCheckpointReward(blockInterval, signedStakePower, committedTotalPower);
-
-        uint256 _proposerBonus = reward.mul(proposerBonus).div(MAX_PROPOSER_BONUS);
-        uint256 proposerId = signerToValidator[proposer];
-
-        Validator storage _proposer = validators[proposerId];
-        _proposer.reward = _proposer.reward.add(_proposerBonus);
-
-        // update stateMerkleTree root for accounts balance on giltconsensus chain
-        accountStateRoot = stateRoot;
-
-        uint256 newRewardPerStake =
-            rewardPerStake.add(reward.sub(_proposerBonus).mul(REWARD_PRECISION).div(signedStakePower));
-
-        // evaluate rewards for validator who did't sign and set latest reward per stake to new value to avoid them from
-        // getting new rewards.
-        _updateValidatorsRewards(unsignedValidators, totalUnsignedValidators, newRewardPerStake);
-
-        // distribute rewards between signed validators
-        rewardPerStake = newRewardPerStake;
-
-        _finalizeCommit();
-        return reward;
-    }
-
-    function _updateValidatorsRewards(
-        uint256[] memory unsignedValidators,
-        uint256 totalUnsignedValidators,
-        uint256 newRewardPerStake
-    ) private {
-        uint256 currentRewardPerStake = rewardPerStake;
-        for (uint256 i = 0; i < totalUnsignedValidators; ++i) {
-            _updateRewardsAndCommit(unsignedValidators[i], currentRewardPerStake, newRewardPerStake);
-        }
-    }
-
-    function _updateRewardsAndCommit(
-        uint256 validatorId,
-        uint256 currentRewardPerStake,
-        uint256 newRewardPerStake
-    ) private {
-        uint256 deactivationEpoch = validators[validatorId].deactivationEpoch;
-        if (deactivationEpoch != 0 && currentEpoch >= deactivationEpoch) {
-            return;
-        }
-
-        uint256 initialRewardPerStake = validators[validatorId].initialRewardPerStake;
-
-        // attempt to save gas in case if rewards were updated previously
-        if (initialRewardPerStake < currentRewardPerStake) {
-            uint256 validatorsStake = validators[validatorId].amount;
-            uint256 valDelegatedAmount = validators[validatorId].delegatedAmount;
-            if (valDelegatedAmount > 0) {
-                uint256 combinedStakePower = validatorsStake.add(valDelegatedAmount);
-                _increaseValidatorRewardWithDelegation(
-                    validatorId,
-                    validatorsStake,
-                    valDelegatedAmount,
-                    _getEligibleValidatorReward(combinedStakePower, currentRewardPerStake, initialRewardPerStake)
-                );
-            } else {
-                _increaseValidatorReward(
-                    validatorId,
-                    _getEligibleValidatorReward(validatorsStake, currentRewardPerStake, initialRewardPerStake)
-                );
-            }
-        }
-
-        if (newRewardPerStake > initialRewardPerStake) {
-            validators[validatorId].initialRewardPerStake = newRewardPerStake;
-        }
-    }
-
     function _updateRewards(uint256 validatorId) private {
-        _updateRewardsAndCommit(validatorId, rewardPerStake, rewardPerStake);
-    }
-
-    function _getEligibleValidatorReward(
-        uint256 validatorStakePower,
-        uint256 currentRewardPerStake,
-        uint256 initialRewardPerStake
-    ) private pure returns (uint256) {
-        uint256 eligibleReward = currentRewardPerStake - initialRewardPerStake;
-        return eligibleReward.mul(validatorStakePower).div(REWARD_PRECISION);
-    }
-
-    function _increaseValidatorReward(uint256 validatorId, uint256 reward) private {
-        if (reward > 0) {
-            validators[validatorId].reward = validators[validatorId].reward.add(reward);
-        }
-    }
-
-    function _increaseValidatorRewardWithDelegation(
-        uint256 validatorId,
-        uint256 validatorsStake,
-        uint256 valDelegatedAmount,
-        uint256 reward
-    ) private {
-        uint256 combinedStakePower = valDelegatedAmount.add(validatorsStake);
-        (uint256 valReward, uint256 delReward) =
-            _getValidatorAndDelegationReward(validatorId, validatorsStake, reward, combinedStakePower);
-
-        if (delReward > 0) {
-            validators[validatorId].delegatorsReward = validators[validatorId].delegatorsReward.add(delReward);
-        }
-
-        if (valReward > 0) {
-            validators[validatorId].reward = validators[validatorId].reward.add(valReward);
-        }
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(StakeManagerExtension(extensionCode).updateRewards.selector, validatorId)
+        );
     }
 
     function _getValidatorAndDelegationReward(
@@ -908,51 +683,6 @@ contract StakeManager is
         );
     }
 
-    function _stakeFor(
-        address user,
-        uint256 amount,
-        bool acceptDelegation,
-        bytes memory signerPubkey
-    ) internal returns (uint256) {
-        address signer = _getAndAssertSigner(signerPubkey);
-        uint256 _currentEpoch = currentEpoch;
-        uint256 validatorId = NFTCounter;
-        StakingInfo _logger = logger;
-
-        uint256 newTotalStaked = totalStaked.add(amount);
-        totalStaked = newTotalStaked;
-
-        validators[validatorId] = Validator({
-            reward: INITIALIZED_AMOUNT,
-            amount: amount,
-            activationEpoch: _currentEpoch,
-            deactivationEpoch: 0,
-            jailTime: 0,
-            signer: signer,
-            contractAddress: acceptDelegation
-                ? validatorShareFactory.create(validatorId, address(_logger), registry)
-                : address(0x0),
-            status: Status.Active,
-            commissionRate: 0,
-            lastCommissionUpdate: 0,
-            delegatorsReward: INITIALIZED_AMOUNT,
-            delegatedAmount: 0,
-            initialRewardPerStake: rewardPerStake
-        });
-
-        latestSignerUpdateEpoch[validatorId] = _currentEpoch;
-        NFTContract.mint(user, validatorId);
-
-        signerToValidator[signer] = validatorId;
-        updateTimeline(int256(amount), 1, 0);
-        _logger.logStaked(signer, signerPubkey, validatorId, _currentEpoch, amount, newTotalStaked);
-        NFTCounter = validatorId.add(1);
-
-        _insertSigner(signer);
-
-        return validatorId;
-    }
-
     function _unstake(uint256 validatorId, uint256 exitEpoch, bool pol) internal {
         require(validators[validatorId].deactivationEpoch == 0);
 
@@ -981,15 +711,10 @@ contract StakeManager is
     }
 
     function _finalizeCommit() internal {
-        uint256 _currentEpoch = currentEpoch;
-        uint256 nextEpoch = _currentEpoch.add(1);
-
-        StateChange memory changes = validatorStateChanges[nextEpoch];
-        updateTimeline(changes.amount, changes.stakerCount, 0);
-
-        delete validatorStateChanges[_currentEpoch];
-
-        currentEpoch = nextEpoch;
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(StakeManagerExtension(extensionCode).finalizeCommit.selector)
+        );
     }
 
     function _liquidateRewards(uint256 validatorId, address validatorUser, bool pol) private {

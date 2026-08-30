@@ -23,6 +23,7 @@ contract DeploySystemWGILTTest is Test, DeploySystem {
         }
         vm.setEnv("GOVERNANCE_MULTISIG", vm.toString(governanceMultisig));
         deployAll();
+        setTestConfig();
     }
 
     function test_deploy_uses_wgilt_as_legacy_stake_token() public view {
@@ -33,6 +34,8 @@ contract DeploySystemWGILTTest is Test, DeploySystem {
     }
 
     function test_governance_multisig_is_stake_manager_owner_not_deployer() public view {
+        assertEq(owner, governanceMultisig, "GOVERNANCE_MULTISIG must be wired into deployAll owner");
+        assertEq(stakeManager.owner(), owner, "StakeManager Ownable owner must match deploy owner");
         assertEq(stakeManager.owner(), governanceMultisig, "StakeManager owner must be GOVERNANCE_MULTISIG");
         assertNotEq(stakeManager.owner(), address(this), "StakeManager owner must not be deploy caller");
         assertEq(address(stakeManager.governance()), governanceProxy, "onlyGovernance surface is governance proxy");
@@ -41,6 +44,7 @@ contract DeploySystemWGILTTest is Test, DeploySystem {
 
     function test_stakeFor_with_wgilt_emits_staked() public {
         Validator memory validator = createValidator(8);
+        address signer = address(uint160(uint256(keccak256(validator.pubKey))));
         uint256 stakeAmount = defaultStakeVS;
         uint256 fee = stakeManager.minGiltConsensusFee();
         fundAddrLegacyToken(validator.addr, stakeAmount + fee);
@@ -54,7 +58,7 @@ contract DeploySystemWGILTTest is Test, DeploySystem {
 
         vm.expectEmit(true, true, true, true, address(stakingInfo));
         emit Staked(
-            validator.addr, validatorId, 1, activationEpoch, stakeAmount, expectedTotal, validator.pubKey
+            signer, validatorId, 1, activationEpoch, stakeAmount, expectedTotal, validator.pubKey
         );
 
         vm.prank(validator.addr);

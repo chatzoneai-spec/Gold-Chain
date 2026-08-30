@@ -144,6 +144,8 @@ contract DeploySystem is Script, ArtifactPath {
                 )
             );
 
+        StakeManagerProxy(payable(stakeManagerProxy)).transferOwnership(owner);
+
         StakingNFT(stakingNFT).transferOwnership(address(stakeManager));
 
         address stateSender = deployCode(StateSenderPath);
