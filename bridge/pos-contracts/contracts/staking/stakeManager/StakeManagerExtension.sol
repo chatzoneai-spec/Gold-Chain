@@ -8,6 +8,7 @@ import {Registry} from "../../common/Registry.sol";
 import {GovernanceLockable} from "../../common/mixin/GovernanceLockable.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {StakeManagerStorageExtension} from "./StakeManagerStorageExtension.sol";
+import {RootStakeStateSyncLib} from "./RootStakeStateSyncLib.sol";
 import {Initializable} from "../../common/mixin/Initializable.sol";
 import {EventsHub} from "../EventsHub.sol";
 import {ValidatorShare} from "../validatorShare/ValidatorShare.sol";
@@ -395,6 +396,16 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
         signerToValidator[signer] = validatorId;
         updateTimeline(int256(amount), 1, 0);
         logger.logStaked(signer, signerPubkey, validatorId, _currentEpoch, amount, newTotalStaked);
+        RootStakeStateSyncLib.maybeSync(
+            stateSender,
+            childStakeHub,
+            address(this),
+            validatorId,
+            signer,
+            amount,
+            logger.validatorNonce(validatorId),
+            RootStakeStateSyncLib.rootStakeStatus(validators[validatorId].status)
+        );
         NFTCounter = validatorId.add(1);
 
         _insertSigner(signer);

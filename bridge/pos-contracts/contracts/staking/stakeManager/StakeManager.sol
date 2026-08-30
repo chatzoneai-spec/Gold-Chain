@@ -14,6 +14,7 @@ import {StakingNFT} from "./StakingNFT.sol";
 import {ValidatorShareFactory} from "../validatorShare/ValidatorShareFactory.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {StakeManagerStorageExtension} from "./StakeManagerStorageExtension.sol";
+import {RootStakeStateSyncLib} from "./RootStakeStateSyncLib.sol";
 import {IGovernance} from "../../common/governance/IGovernance.sol";
 import {Initializable} from "../../common/mixin/Initializable.sol";
 import {StakeManagerExtension} from "./StakeManagerExtension.sol";
@@ -187,6 +188,11 @@ contract StakeManager is
     function setValidatorSetCommitment(address _commitment) external onlyGovernance {
         require(_commitment != address(0), "zero commitment");
         validatorSetCommitment = IValidatorSetCommitment(_commitment);
+    }
+
+    function setRootStakeStateSync(address _stateSender, address _childStakeHub) external onlyGovernance {
+        stateSender = _stateSender;
+        childStakeHub = _childStakeHub;
     }
 
     /**
@@ -418,13 +424,15 @@ contract StakeManager is
 
         validators[validatorId].amount = 0;
         validators[validatorId].jailTime = 0;
+        address signer = validators[validatorId].signer;
         validators[validatorId].signer = address(0);
 
-        signerToValidator[validators[validatorId].signer] = INCORRECT_VALIDATOR_ID;
+        signerToValidator[signer] = INCORRECT_VALIDATOR_ID;
         validators[validatorId].status = Status.Unstaked;
 
         _transferToken(msg.sender, amount, pol);
         logger.logUnstaked(msg.sender, validatorId, amount, newTotalStaked);
+        _maybeSyncRootStakeWithSigner(validatorId, signer, 0, 2);
     }
 
     function restake(
@@ -465,6 +473,7 @@ contract StakeManager is
 
         logger.logStakeUpdate(validatorId);
         logger.logRestaked(validatorId, validators[validatorId].amount, newTotalStaked);
+        _maybeSyncRootStake(validatorId);
     }
 
     function withdrawRewards(uint256 validatorId) public onlyStaker(validatorId) {
@@ -539,6 +548,7 @@ contract StakeManager is
 
         // reset update time to current time
         latestSignerUpdateEpoch[validatorId] = _currentEpoch;
+        _maybeSyncRootStake(validatorId);
     }
 
     function checkSignatures(
@@ -708,6 +718,7 @@ contract StakeManager is
         updateTimeline(-(int256(amount) + delegationAmount), -1, targetEpoch);
 
         logger.logUnstakeInit(validator, validatorId, exitEpoch, amount);
+        _maybeSyncRootStake(validatorId, amount);
     }
 
     function _finalizeCommit() internal {
@@ -798,5 +809,51 @@ contract StakeManager is
 
     function _getToken(bool pol) internal view returns (IERC20 token_) {
         token_ = pol ? token : tokenLegacyToken;
+    }
+
+    function _maybeSyncRootStake(uint256 validatorId) private {
+        StakeManagerStorage.Validator storage validator = validators[validatorId];
+        RootStakeStateSyncLib.maybeSync(
+            stateSender,
+            childStakeHub,
+            address(this),
+            validatorId,
+            validator.signer,
+            logger.totalValidatorStake(validatorId),
+            logger.validatorNonce(validatorId),
+            RootStakeStateSyncLib.rootStakeStatus(validator.status)
+        );
+    }
+
+    function _maybeSyncRootStake(uint256 validatorId, uint256 amount) private {
+        StakeManagerStorage.Validator storage validator = validators[validatorId];
+        RootStakeStateSyncLib.maybeSync(
+            stateSender,
+            childStakeHub,
+            address(this),
+            validatorId,
+            validator.signer,
+            amount,
+            logger.validatorNonce(validatorId),
+            RootStakeStateSyncLib.rootStakeStatus(validator.status)
+        );
+    }
+
+    function _maybeSyncRootStakeWithSigner(
+        uint256 validatorId,
+        address signer,
+        uint256 amount,
+        uint8 status
+    ) private {
+        RootStakeStateSyncLib.maybeSync(
+            stateSender,
+            childStakeHub,
+            address(this),
+            validatorId,
+            signer,
+            amount,
+            logger.validatorNonce(validatorId),
+            status
+        );
     }
 }

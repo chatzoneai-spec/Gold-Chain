@@ -22,4 +22,7 @@ contract StakeManagerStorageExtension {
     IERC20 public tokenLegacyToken;
     IGiltMigration public migration;
     IValidatorSetCommitment public validatorSetCommitment;
+
+    address public stateSender;
+    address public childStakeHub;
 }
