@@ -51,6 +51,7 @@ import (
 type EthAPIBackend struct {
 	extRPCEnabled       bool
 	allowUnprotectedTxs bool
+	insecureUnlock      bool
 	eth                 *Ethereum
 	gpo                 *gasprice.Oracle
 }
@@ -477,6 +478,10 @@ func (b *EthAPIBackend) ChainDb() ethdb.Database {
 
 func (b *EthAPIBackend) AccountManager() *accounts.Manager {
 	return b.eth.AccountManager()
+}
+
+func (b *EthAPIBackend) InsecureUnlockAllowed() bool {
+	return b.insecureUnlock
 }
 
 func (b *EthAPIBackend) ExtRPCEnabled() bool {

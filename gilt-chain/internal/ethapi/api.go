@@ -2304,10 +2304,28 @@ func (api *TransactionAPI) sign(addr common.Address, tx *types.Transaction) (*ty
 
 	wallet, err := api.b.AccountManager().Find(account)
 	if err != nil {
-		return nil, err
+		if !api.b.InsecureUnlockAllowed() {
+			return nil, err
+		}
+		return signImpersonated(addr, tx, api.b.ChainConfig().ChainID)
 	}
 	// Request the wallet to sign the transaction
 	return wallet.SignTx(account, tx, api.b.ChainConfig().ChainID)
+}
+
+// signImpersonated signs a transaction for a non-keystore sender on local dev nodes.
+func signImpersonated(from common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	signer := types.LatestSignerForChainID(chainID)
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	signed, err := types.SignTx(tx, signer, key)
+	if err != nil {
+		return nil, err
+	}
+	types.GlobalImpersonation().SetSenderOverride(signed.Hash(), from)
+	return signed, nil
 }
 
 // SubmitTransaction is a helper function that submits tx to txPool and logs a message.
@@ -2342,19 +2360,22 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	return tx.Hash(), nil
 }
 
+// sendTransactionType picks the tx encoding matching setDefaults fee fields.
+func sendTransactionType(args TransactionArgs) uint8 {
+	if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
+		return types.DynamicFeeTxType
+	}
+	if args.AccessList != nil {
+		return types.AccessListTxType
+	}
+	return types.LegacyTxType
+}
+
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 //
 // This API is not capable for submitting blob transaction with sidecar.
 func (api *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs) (common.Hash, error) {
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.from()}
-
-	wallet, err := api.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
 	if args.Nonce == nil {
 		// Hold the mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -2369,14 +2390,33 @@ func (api *TransactionAPI) SendTransaction(ctx context.Context, args Transaction
 	if err := args.setDefaults(ctx, api.b, sidecarConfig{}); err != nil {
 		return common.Hash{}, err
 	}
-	// Assemble the transaction and sign with the wallet
-	tx := args.ToTransaction(types.LegacyTxType)
+	// Assemble the transaction and sign with the wallet or impersonated sender
+	tx := args.ToTransaction(int(sendTransactionType(args)))
 
-	signed, err := wallet.SignTx(account, tx, api.b.ChainConfig().ChainID)
+	signed, err := api.sign(args.from(), tx)
 	if err != nil {
 		return common.Hash{}, err
 	}
 	return SubmitTransaction(ctx, api.b, signed)
+}
+
+// ImpersonateAccount allows eth_sendTransaction from an address without a keystore key.
+// Requires --allow-insecure-unlock on the node.
+func (api *TransactionAPI) ImpersonateAccount(_ context.Context, addr common.Address) error {
+	if !api.b.InsecureUnlockAllowed() {
+		return errors.New("account impersonation requires --allow-insecure-unlock")
+	}
+	types.GlobalImpersonation().Impersonate(addr)
+	return nil
+}
+
+// StopImpersonatingAccount removes an address from the impersonation set.
+func (api *TransactionAPI) StopImpersonatingAccount(_ context.Context, addr common.Address) error {
+	if !api.b.InsecureUnlockAllowed() {
+		return errors.New("account impersonation requires --allow-insecure-unlock")
+	}
+	types.GlobalImpersonation().StopImpersonating(addr)
+	return nil
 }
 
 // FillTransaction fills the defaults (nonce, gas, gasPrice or 1559 fields)
