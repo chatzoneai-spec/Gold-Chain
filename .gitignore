@@ -1,6 +1,7 @@
 **/.gocache/
 **/.gomodcache/
 **/.tmp/
+.roughnet-wallets/
 **/.telecode/
 **/.live-chain/
 **/.live-chain-runtime-*/
