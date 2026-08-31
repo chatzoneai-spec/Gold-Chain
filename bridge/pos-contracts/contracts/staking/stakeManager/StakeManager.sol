@@ -562,6 +562,19 @@ contract StakeManager is
         felonySlashAmount = _felonySlashAmount;
     }
 
+    function applyCutoverShares(
+        uint256 validatorId,
+        address[] calldata delegators,
+        uint256[] calldata amounts
+    ) external onlyGovernance {
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(
+                StakeManagerCutover(extensionCode).applyCutoverShares.selector, validatorId, delegators, amounts
+            )
+        );
+    }
+
     function relaySlash(bytes calldata data, uint256[3][] calldata sigs) external {
         delegatedFwd(
             extensionCode,

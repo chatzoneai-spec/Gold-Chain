@@ -31,4 +31,10 @@ contract StakeManagerStorageExtension {
     mapping(bytes32 => bool) public executedSlashEvidence;
     uint256 public downtimeSlashAmount;
     uint256 public felonySlashAmount;
+
+    // Wave 5 GILT cutover: mint ValidatorShare 1:1 from already-locked validator wGILT.
+    mapping(uint256 => mapping(address => bool)) public cutoverShareApplied;
+    mapping(uint256 => uint256) public cutoverSharesAppliedTotal;
+
+    event CutoverSharesApplied(uint256 indexed validatorId, address indexed delegator, uint256 amount);
 }

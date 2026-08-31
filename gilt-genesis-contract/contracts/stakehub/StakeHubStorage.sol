@@ -100,6 +100,15 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     error InvalidInflationMintAmount(uint256 expectedAmount, uint256 actualAmount);
     error InflationAlreadyRecorded(uint256 dayIndex);
     error StakeHubModuleDirectCall();
+    error GiltStakeFrozen();
+    error GiltCutoverSnapshotNotTaken();
+    error GiltCutoverSnapshotImmutable();
+    error GiltCutoverAlreadyFlipped();
+    error GiltCutoverNotFlipped();
+    error GiltCutoverInsufficientRootStake(uint256 required, uint256 available);
+    error GiltCutoverFreezeRequired();
+    error GiltCutoverDelegatorNotMigrated();
+    error RootStakeAnchorDisabled();
 
     /*----------------- storage -----------------*/
     uint8 internal _receiveFundStatus;
@@ -254,6 +263,16 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     uint256 public rootStakeSnapshotTotal;
     mapping(uint256 => RootStakeRecord) internal _rootStakeByValidatorId;
     mapping(address => uint256) internal _rootValidatorIdBySigner;
+
+    // Wave 5 live-cutover: freeze, snapshot, per-validator flip to root-derived GILT power
+    bool public giltStakeFreezeEnabled;
+    uint256 public giltCutoverSnapshotBlock;
+    uint256 public giltCutoverFlippedCount;
+    mapping(address => uint256) public giltCutoverSnapshotGilt;
+    mapping(address => bool) public giltCutoverFlipped;
+    mapping(address => uint256) public giltCutoverRootValidatorId;
+    mapping(address => mapping(address => uint256)) public giltCutoverMigratedGilt;
+    mapping(address => EnumerableSet.AddressSet) internal _giltDelegators;
 
     /*----------------- structs and events -----------------*/
     struct StakeMigrationPackage {
@@ -454,6 +473,18 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
         uint8 status
     );
     event RootStakeDivergenceDetected(uint256 rootTotal, uint256 trackedTotal, address indexed reporter);
+
+    event GiltStakeFreezeToggled(bool enabled);
+    event GiltCutoverSnapshotTaken(uint256 blockNumber, uint256 validatorCount);
+    event GiltCutoverValidatorFlipped(
+        address indexed operatorAddress,
+        address indexed consensusAddress,
+        uint256 snapshotGilt,
+        uint256 rootValidatorId,
+        uint256 rootStakeAmount,
+        uint256 delegatorCount
+    );
+    event GiltCutoverDelegatorMigrated(address indexed operatorAddress, address indexed delegator, uint256 giltAmount);
 
     event MigrateSuccess(
         address indexed operatorAddress, address indexed delegator, uint256 shares, uint256 giltAmount

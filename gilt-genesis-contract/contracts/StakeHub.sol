@@ -9,6 +9,7 @@ import "./stakehub/StakeHubMigration.sol";
 import "./stakehub/StakeHubParams.sol";
 import "./stakehub/StakeHubRewards.sol";
 import "./stakehub/StakeHubRootStake.sol";
+import "./stakehub/StakeHubGiltCutover.sol";
 import "./stakehub/StakeHubSlashing.sol";
 import "./stakehub/StakeHubValidatorViews.sol";
 import "./stakehub/StakeHubValidators.sol";
@@ -24,6 +25,7 @@ contract StakeHub is StakeHubCommon {
     address public constant STAKE_HUB_PARAMS_MODULE_ADDR = 0x0000000000000000000000000000000000002017;
     address public constant STAKE_HUB_VALIDATOR_VIEWS_MODULE_ADDR = 0x0000000000000000000000000000000000002018;
     address public constant STAKE_HUB_ROOT_STAKE_MODULE_ADDR = 0x0000000000000000000000000000000000002019;
+    address public constant STAKE_HUB_GILT_CUTOVER_MODULE_ADDR = 0x000000000000000000000000000000000000201A;
 
     error UnknownStakeHubSelector(bytes4 selector);
     error StakeHubModuleUnavailable(address module);
@@ -216,6 +218,16 @@ contract StakeHub is StakeHubCommon {
                 || selector == StakeHubRootStake.getRootStakeAmountByConsensus.selector
         ) {
             return STAKE_HUB_ROOT_STAKE_MODULE_ADDR;
+        }
+
+        if (
+            selector == StakeHubGiltCutover.takeGiltCutoverSnapshot.selector
+                || selector == StakeHubGiltCutover.cutoverValidatorToRoot.selector
+                || selector == StakeHubGiltCutover.getGiltCutoverMigratedGilt.selector
+                || selector == StakeHubGiltCutover.isGiltCutoverFlipped.selector
+                || selector == StakeHubGiltCutover.getGiltCutoverSnapshotGilt.selector
+        ) {
+            return STAKE_HUB_GILT_CUTOVER_MODULE_ADDR;
         }
 
         return address(0);

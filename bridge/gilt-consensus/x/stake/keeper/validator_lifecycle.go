@@ -141,8 +141,15 @@ func (k Keeper) GetValidatorApprovalVoteStatus(ctx context.Context, valID uint64
 	return yesPower, totalPower, finalized, nil
 }
 
+func (k *Keeper) rejectNativeStakeWrite() error {
+	return errorsmod.Wrap(types.ErrNativeStakeRetired, "native bank stake cannot write validator power")
+}
+
 func (k *Keeper) ApproveValidator(ctx context.Context, msg *types.MsgApproveValidator) error {
 	k.PanicIfSetupIsIncomplete()
+	if err := k.rejectNativeStakeWrite(); err != nil {
+		return err
+	}
 	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
@@ -281,6 +288,9 @@ func (k *Keeper) ApproveValidator(ctx context.Context, msg *types.MsgApproveVali
 
 func (k *Keeper) JoinValidator(ctx context.Context, msg *types.MsgValidatorJoin) (types.Validator, error) {
 	k.PanicIfSetupIsIncomplete()
+	if err := k.rejectNativeStakeWrite(); err != nil {
+		return types.Validator{}, err
+	}
 	if err := msg.ValidateBasic(); err != nil {
 		return types.Validator{}, err
 	}
@@ -373,6 +383,9 @@ func (k *Keeper) JoinValidator(ctx context.Context, msg *types.MsgValidatorJoin)
 
 func (k *Keeper) IncreaseValidatorStake(ctx context.Context, msg *types.MsgStakeUpdate) (types.Validator, error) {
 	k.PanicIfSetupIsIncomplete()
+	if err := k.rejectNativeStakeWrite(); err != nil {
+		return types.Validator{}, err
+	}
 	if err := msg.ValidateBasic(); err != nil {
 		return types.Validator{}, err
 	}
@@ -444,6 +457,9 @@ func (k *Keeper) IncreaseValidatorStake(ctx context.Context, msg *types.MsgStake
 
 func (k *Keeper) UpdateValidatorSigner(ctx context.Context, msg *types.MsgSignerUpdate) (types.Validator, error) {
 	k.PanicIfSetupIsIncomplete()
+	if err := k.rejectNativeStakeWrite(); err != nil {
+		return types.Validator{}, err
+	}
 	if err := msg.ValidateBasic(); err != nil {
 		return types.Validator{}, err
 	}
@@ -516,6 +532,9 @@ func (k *Keeper) UpdateValidatorSigner(ctx context.Context, msg *types.MsgSigner
 
 func (k *Keeper) ExitValidator(ctx context.Context, msg *types.MsgValidatorExit) (types.Validator, error) {
 	k.PanicIfSetupIsIncomplete()
+	if err := k.rejectNativeStakeWrite(); err != nil {
+		return types.Validator{}, err
+	}
 	if err := msg.ValidateBasic(); err != nil {
 		return types.Validator{}, err
 	}

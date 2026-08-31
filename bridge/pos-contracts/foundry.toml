@@ -29,6 +29,22 @@ auto_detect_solc = true
 test = "test/unitForge/staking/SlashRelay.t.sol"
 via_ir = false
 
+[profile.wave4]
+src = "contracts/staking/stakeManager/MockRootChainChainId.sol"
+test = "test/unitForge/staking/Wave4SlashRelayAttack.t.sol"
+via_ir = false
+extra_output_files = ["abi"]
+
+[profile.wave4-stakinginfo]
+src = "contracts/staking/StakingInfo.sol"
+test = "test/unitForge/staking/Wave4StakingInfoReplayAttack.t.sol"
+via_ir = false
+
+[profile.wave5]
+src = "contracts/staking/stakeManager/CutoverSharesHarness.sol"
+test = "test/unitForge/staking/Wave5CutoverShares.t.sol"
+via_ir = true
+
 [invariant]
 fail_on_revert = false
 call_override = false

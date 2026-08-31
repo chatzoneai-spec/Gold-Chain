@@ -30,32 +30,24 @@ func (srv msgServer) ApproveValidator(ctx context.Context, msg *types.MsgApprove
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ApproveValidatorMethod, startTime, &err)
 
-	err = srv.k.ApproveValidator(ctx, msg)
+	err = srv.k.rejectNativeStakeWrite()
 	if err != nil {
 		return nil, err
 	}
-
-	yesPower, totalPower, finalized, err := srv.k.GetValidatorApprovalVoteStatus(ctx, msg.ValId)
-	if err != nil {
-		return nil, err
-	}
-
-	emitApprovalVoteEvent(ctx, msg, yesPower, totalPower, finalized)
 	return &types.MsgApproveValidatorResponse{}, nil
 }
 
-// ValidatorJoin processes a native validator join after prior approval.
+// ValidatorJoin processes a root-anchored validator join.
 func (srv msgServer) ValidatorJoin(ctx context.Context, msg *types.MsgValidatorJoin) (*types.MsgValidatorJoinResponse, error) {
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorJoinMethod, startTime, &err)
 
-	var validator types.Validator
-	if helper.IsRootAnchoredStakeReadEnabled() {
-		validator, err = srv.k.JoinValidatorFromRoot(ctx, msg)
-	} else {
-		validator, err = srv.k.JoinValidator(ctx, msg)
+	if !helper.IsRootAnchoredStakeReadEnabled() {
+		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator join requires root-anchored stake")
 	}
+
+	validator, err := srv.k.JoinValidatorFromRoot(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -64,23 +56,17 @@ func (srv msgServer) ValidatorJoin(ctx context.Context, msg *types.MsgValidatorJ
 	return &types.MsgValidatorJoinResponse{}, nil
 }
 
-// StakeUpdate increases a validator's native self-staked GILT.
+// StakeUpdate sets validator GILT stake from the root-anchored source of truth.
 func (srv msgServer) StakeUpdate(ctx context.Context, msg *types.MsgStakeUpdate) (*types.MsgStakeUpdateResponse, error) {
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.StakeUpdateMethod, startTime, &err)
 
-	if helper.IsRootAnchoredStakeReadEnabled() {
-		validator, err := srv.k.SetValidatorStakeFromRoot(ctx, msg)
-		if err != nil {
-			return nil, err
-		}
-
-		emitValidatorEvent(ctx, types.EventTypeStakeUpdate, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-		return &types.MsgStakeUpdateResponse{}, nil
+	if !helper.IsRootAnchoredStakeReadEnabled() {
+		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "stake update requires root-anchored stake")
 	}
 
-	validator, err := srv.k.IncreaseValidatorStake(ctx, msg)
+	validator, err := srv.k.SetValidatorStakeFromRoot(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -89,18 +75,17 @@ func (srv msgServer) StakeUpdate(ctx context.Context, msg *types.MsgStakeUpdate)
 	return &types.MsgStakeUpdateResponse{}, nil
 }
 
-// SignerUpdate updates the signer key controlled by the validator operator.
+// SignerUpdate updates the signer key from the root-anchored source of truth.
 func (srv msgServer) SignerUpdate(ctx context.Context, msg *types.MsgSignerUpdate) (*types.MsgSignerUpdateResponse, error) {
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.SignerUpdateMethod, startTime, &err)
 
-	var validator types.Validator
-	if helper.IsRootAnchoredStakeReadEnabled() {
-		validator, err = srv.k.UpdateValidatorSignerFromRoot(ctx, msg)
-	} else {
-		validator, err = srv.k.UpdateValidatorSigner(ctx, msg)
+	if !helper.IsRootAnchoredStakeReadEnabled() {
+		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "signer update requires root-anchored stake")
 	}
+
+	validator, err := srv.k.UpdateValidatorSignerFromRoot(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -109,26 +94,19 @@ func (srv msgServer) SignerUpdate(ctx context.Context, msg *types.MsgSignerUpdat
 	return &types.MsgSignerUpdateResponse{}, nil
 }
 
-// ValidatorExit exits a validator through native Gold Chain state.
+// ValidatorExit exits a validator through root-anchored Gold Chain state.
 func (srv msgServer) ValidatorExit(ctx context.Context, msg *types.MsgValidatorExit) (*types.MsgValidatorExitResponse, error) {
 	var err error
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorExitMethod, startTime, &err)
 
-	if helper.IsRootAnchoredStakeReadEnabled() {
-		if msg.RootDeactivationEpoch == 0 {
-			return nil, errorsmod.Wrap(types.ErrInvalidMsg, "missing root deactivation epoch")
-		}
-		validator, err := srv.k.ExitValidatorFromRoot(ctx, msg, msg.RootDeactivationEpoch)
-		if err != nil {
-			return nil, err
-		}
-
-		emitValidatorEvent(ctx, types.EventTypeValidatorExit, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-		return &types.MsgValidatorExitResponse{}, nil
+	if !helper.IsRootAnchoredStakeReadEnabled() {
+		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator exit requires root-anchored stake")
 	}
-
-	validator, err := srv.k.ExitValidator(ctx, msg)
+	if msg.RootDeactivationEpoch == 0 {
+		return nil, errorsmod.Wrap(types.ErrInvalidMsg, "missing root deactivation epoch")
+	}
+	validator, err := srv.k.ExitValidatorFromRoot(ctx, msg, msg.RootDeactivationEpoch)
 	if err != nil {
 		return nil, err
 	}

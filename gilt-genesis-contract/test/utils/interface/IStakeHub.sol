@@ -509,4 +509,24 @@ interface StakeHub {
         address[] calldata validatorsToQuery
     ) external view returns (address[] memory consensusAddresses, bytes32[][] memory nodeIDsList);
     function maxNodeIDs() external view returns (uint256);
+
+    function takeGiltCutoverSnapshot() external;
+    function cutoverValidatorToRoot(
+        address operatorAddress
+    ) external;
+    function getGiltCutoverMigratedGilt(
+        address operatorAddress,
+        address delegator
+    ) external view returns (uint256);
+    function isGiltCutoverFlipped(
+        address operatorAddress
+    ) external view returns (bool);
+    function getGiltCutoverSnapshotGilt(
+        address operatorAddress
+    ) external view returns (uint256);
+    function getRootStakeAmountByConsensus(
+        address consensusAddress
+    ) external view returns (uint256);
+    function giltStakeFreezeEnabled() external view returns (bool);
+    function giltCutoverSnapshotBlock() external view returns (uint256);
 }

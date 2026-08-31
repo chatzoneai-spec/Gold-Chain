@@ -100,7 +100,7 @@ contract StakeHubSlashing is StakeHubCommon {
         // slash
         (bool canSlash, uint256 jailUntil) = _checkFelonyRecord(operatorAddress, SlashType.MaliciousVote);
         if (!canSlash) revert AlreadySlashed();
-        bytes32 evidenceRef = keccak256(abi.encodePacked(_evidence.voteAddr, SlashType.MaliciousVote, block.number));
+        bytes32 evidenceRef = keccak256(abi.encodePacked(voteAddress, SlashType.MaliciousVote, block.number));
         uint256 slashAmount = _applySlash(
             valInfo.consensusAddress,
             operatorAddress,
@@ -174,7 +174,7 @@ contract StakeHubSlashing is StakeHubCommon {
         bytes32 evidenceRef,
         uint256 jailUntil
     ) internal returns (uint256 giltSlashAmount) {
-        if (rootAnchoredGiltStakingEnabled) {
+        if (rootAnchoredGiltStakingEnabled && giltCutoverFlipped[operatorAddress]) {
             uint256 rootValidatorId = _rootValidatorIdBySigner[consensusAddress];
             if (rootValidatorId == 0) revert InvalidRequest();
             emit RootSlashIntent(

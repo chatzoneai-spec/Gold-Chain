@@ -5,9 +5,9 @@ import {SafeMath} from "../../common/oz/math/SafeMath.sol";
 import {Math} from "../../common/oz/math/Math.sol";
 import {ECVerify} from "../../common/lib/ECVerify.sol";
 import {Registry} from "../../common/Registry.sol";
-import {GovernanceLockable} from "../../common/mixin/GovernanceLockable.sol";
 import {StakeManagerStorage} from "./StakeManagerStorage.sol";
 import {StakeManagerStorageExtension} from "./StakeManagerStorageExtension.sol";
+import {StakeManagerCutover} from "./StakeManagerCutover.sol";
 import {RootStakeStateSyncLib} from "./RootStakeStateSyncLib.sol";
 import {Initializable} from "../../common/mixin/Initializable.sol";
 import {EventsHub} from "../EventsHub.sol";
@@ -21,7 +21,7 @@ interface IChainIdReader {
     function CHAINID() external view returns (uint256);
 }
 
-contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManagerStorageExtension {
+contract StakeManagerExtension is StakeManagerCutover, Initializable {
     using SafeMath for uint256;
 
     uint8 internal constant SLASH_VOTE_PREFIX = 0x02;
@@ -36,8 +36,6 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
         address[] validators;
         uint256 totalValidators;
     }
-
-    constructor() public GovernanceLockable(address(0x0)) {}
 
     function migrateValidatorsData(uint256 validatorIdFrom, uint256 validatorIdTo) external {
         for (uint256 i = validatorIdFrom; i < validatorIdTo; ++i) {

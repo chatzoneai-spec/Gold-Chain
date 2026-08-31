@@ -213,6 +213,12 @@ contract StakeHubParams is StakeHubCommon {
             rootAnchoredGiltStakingEnabled = _boolParam(key, value);
             return true;
         }
+        if (key.compareStrings("giltStakeFreezeEnabled")) {
+            bool enabled = _boolParam(key, value);
+            giltStakeFreezeEnabled = enabled;
+            emit GiltStakeFreezeToggled(enabled);
+            return true;
+        }
         return false;
     }
 
