@@ -68,10 +68,11 @@ contract StakeHubSlashing is StakeHubCommon {
         if (!_validatorSet.contains(operatorAddress)) revert ValidatorNotExisted(); // should never happen
         Validator storage valInfo = _validators[operatorAddress];
 
-        uint256 slashAmount =
-            _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, downtimeSlashAmount, SlashType.DownTime);
         uint256 jailUntil = block.timestamp + downtimeJailTime;
-        _jailValidator(valInfo, jailUntil);
+        bytes32 evidenceRef = keccak256(abi.encodePacked(consensusAddress, SlashType.DownTime, block.number));
+        uint256 slashAmount = _applySlash(
+            consensusAddress, operatorAddress, valInfo, downtimeSlashAmount, SlashType.DownTime, evidenceRef, jailUntil
+        );
 
         emit ValidatorSlashed(operatorAddress, jailUntil, slashAmount, SlashType.DownTime);
 
@@ -99,9 +100,16 @@ contract StakeHubSlashing is StakeHubCommon {
         // slash
         (bool canSlash, uint256 jailUntil) = _checkFelonyRecord(operatorAddress, SlashType.MaliciousVote);
         if (!canSlash) revert AlreadySlashed();
-        uint256 slashAmount =
-            _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, felonySlashAmount, SlashType.MaliciousVote);
-        _jailValidator(valInfo, jailUntil);
+        bytes32 evidenceRef = keccak256(abi.encodePacked(_evidence.voteAddr, SlashType.MaliciousVote, block.number));
+        uint256 slashAmount = _applySlash(
+            valInfo.consensusAddress,
+            operatorAddress,
+            valInfo,
+            felonySlashAmount,
+            SlashType.MaliciousVote,
+            evidenceRef,
+            jailUntil
+        );
 
         emit ValidatorSlashed(operatorAddress, jailUntil, slashAmount, SlashType.MaliciousVote);
 
@@ -131,9 +139,16 @@ contract StakeHubSlashing is StakeHubCommon {
         // slash
         (bool canSlash, uint256 jailUntil) = _checkFelonyRecord(operatorAddress, SlashType.DoubleSign);
         if (!canSlash) revert AlreadySlashed();
-        uint256 slashAmount =
-            _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, felonySlashAmount, SlashType.DoubleSign);
-        _jailValidator(valInfo, jailUntil);
+        bytes32 evidenceRef = keccak256(abi.encodePacked(consensusAddress, SlashType.DoubleSign, block.number));
+        uint256 slashAmount = _applySlash(
+            consensusAddress,
+            operatorAddress,
+            valInfo,
+            felonySlashAmount,
+            SlashType.DoubleSign,
+            evidenceRef,
+            jailUntil
+        );
 
         emit ValidatorSlashed(operatorAddress, jailUntil, slashAmount, SlashType.DoubleSign);
 
@@ -148,6 +163,46 @@ contract StakeHubSlashing is StakeHubCommon {
             return 0;
         }
         return IERC1155(stakeTokenB).balanceOf(reserveVault, tokenId);
+    }
+
+    function _applySlash(
+        address consensusAddress,
+        address operatorAddress,
+        Validator storage valInfo,
+        uint256 slashAmount,
+        SlashType slashType,
+        bytes32 evidenceRef,
+        uint256 jailUntil
+    ) internal returns (uint256 giltSlashAmount) {
+        if (rootAnchoredGiltStakingEnabled) {
+            uint256 rootValidatorId = _rootValidatorIdBySigner[consensusAddress];
+            if (rootValidatorId == 0) revert InvalidRequest();
+            emit RootSlashIntent(
+                rootValidatorId,
+                consensusAddress,
+                _rootSlashTypeCode(slashType),
+                evidenceRef,
+                block.number
+            );
+            _jailValidator(valInfo, jailUntil);
+            return 0;
+        }
+
+        giltSlashAmount = _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, slashAmount, slashType);
+        _jailValidator(valInfo, jailUntil);
+        return giltSlashAmount;
+    }
+
+    function _rootSlashTypeCode(
+        SlashType slashType
+    ) internal pure returns (uint8) {
+        if (slashType == SlashType.DownTime) {
+            return 0;
+        }
+        if (slashType == SlashType.DoubleSign) {
+            return 1;
+        }
+        return 2;
     }
 
     function _slashWithTokenBFirst(

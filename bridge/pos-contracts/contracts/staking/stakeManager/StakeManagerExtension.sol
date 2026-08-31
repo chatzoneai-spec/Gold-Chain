@@ -17,8 +17,17 @@ import {StakingInfo} from "../StakingInfo.sol";
 import {StakingNFT} from "./StakingNFT.sol";
 import {IValidatorSetCommitment} from "../IValidatorSetCommitment.sol";
 
+interface IChainIdReader {
+    function CHAINID() external view returns (uint256);
+}
+
 contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManagerStorageExtension {
     using SafeMath for uint256;
+
+    uint8 internal constant SLASH_VOTE_PREFIX = 0x02;
+    uint8 internal constant SLASH_TYPE_DOWNTIME = 0;
+    uint8 internal constant SLASH_TYPE_DOUBLE_SIGN = 1;
+    uint8 internal constant SLASH_TYPE_MALICIOUS_VOTE = 2;
 
     struct UnsignedValidatorsContext {
         uint256 unsignedValidatorIndex;
@@ -98,6 +107,63 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
         _updateRewardsAndCommit(validatorId, rewardPerStake, rewardPerStake);
     }
 
+    function relaySlash(bytes calldata data, uint256[3][] calldata sigs) external {
+        require(rootSlashRelayEnabled, "slash relay disabled");
+        require(address(validatorSetCommitment) != address(0), "no commitment");
+
+        (uint256 validatorId, uint8 slashType, bytes32 evidenceRef, uint256 giltChainId) =
+            abi.decode(data, (uint256, uint8, bytes32, uint256));
+        require(giltChainId == IChainIdReader(rootChain).CHAINID(), "invalid gilt chain id");
+        require(slashType <= SLASH_TYPE_MALICIOUS_VOTE, "invalid slash type");
+        require(evidenceRef != bytes32(0), "empty evidence ref");
+        require(!executedSlashEvidence[evidenceRef], "slash replay");
+
+        if (downtimeSlashAmount == 0) {
+            downtimeSlashAmount = 10 * (10 ** 18);
+        }
+        if (felonySlashAmount == 0) {
+            felonySlashAmount = 200 * (10 ** 18);
+        }
+
+        bytes32 voteHash = keccak256(abi.encodePacked(bytes1(SLASH_VOTE_PREFIX), data));
+        (uint256 signedStakePower, uint256 committedTotalPower) = _verifyCommittedMajority(voteHash, sigs);
+        require(signedStakePower >= committedTotalPower.mul(2).div(3).add(1), "2/3+1 non-majority!");
+
+        uint256 slashAmount = slashType == SLASH_TYPE_DOWNTIME ? downtimeSlashAmount : felonySlashAmount;
+        _applyRelaySlash(validatorId, evidenceRef, slashAmount);
+    }
+
+    function _applyRelaySlash(uint256 validatorId, bytes32 evidenceRef, uint256 slashAmount) private {
+        Validator storage validator = validators[validatorId];
+        require(validator.amount > 0, "no stake");
+        require(validator.deactivationEpoch == 0, "unstaking");
+        require(validator.status == Status.Active, "not active");
+        if (slashAmount > validator.amount) {
+            slashAmount = validator.amount;
+        }
+        require(slashAmount > 0, "zero slash");
+
+        validator.amount = validator.amount.sub(slashAmount);
+        totalStaked = totalStaked.sub(slashAmount);
+        validator.status = Status.Locked;
+        validator.jailTime = now;
+
+        updateTimeline(-int256(slashAmount), 0, 0);
+        executedSlashEvidence[evidenceRef] = true;
+        slashRelayNonce = slashRelayNonce.add(1);
+        logger.logSlashed(slashRelayNonce, slashAmount);
+        RootStakeStateSyncLib.maybeSync(
+            stateSender,
+            childStakeHub,
+            address(this),
+            validatorId,
+            validator.signer,
+            logger.totalValidatorStake(validatorId),
+            logger.validatorNonce(validatorId),
+            RootStakeStateSyncLib.rootStakeStatus(validator.status)
+        );
+    }
+
     function checkSignatures(
         uint256 blockInterval,
         bytes32 voteHash,
@@ -108,12 +174,8 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
         IValidatorSetCommitment commitment = validatorSetCommitment;
         require(address(commitment) != address(0), "no commitment");
 
-        uint256 committedTotalPower = commitment.totalPower();
-        require(committedTotalPower > 0, "empty committed set");
-
         address[] memory committedSigners = commitment.getSigners();
-        uint256 signedStakePower;
-        address lastAdd;
+        (uint256 signedStakePower, uint256 committedTotalPower) = _verifyCommittedMajority(voteHash, sigs);
 
         UnsignedValidatorsContext memory unsignedCtx;
         unsignedCtx.unsignedValidators = new uint256[](committedSigners.length);
@@ -121,6 +183,45 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
         unsignedCtx.validatorIndex = 0;
         unsignedCtx.totalValidators = committedSigners.length;
 
+        address lastAdd;
+        for (uint256 i = 0; i < sigs.length; ++i) {
+            address signer = ECVerify.ecrecovery(voteHash, sigs[i]);
+            if (signer == lastAdd) {
+                continue;
+            }
+            if (signer <= lastAdd) {
+                break;
+            }
+            if (!commitment.isActiveSigner(signer)) {
+                continue;
+            }
+            lastAdd = signer;
+            unsignedCtx = _fillUnsignedValidators(unsignedCtx, signer);
+        }
+
+        unsignedCtx = _fillUnsignedValidators(unsignedCtx, address(0));
+
+        return _increaseRewardAndAssertConsensus(
+            blockInterval,
+            proposer,
+            signedStakePower,
+            committedTotalPower,
+            stateRoot,
+            unsignedCtx.unsignedValidators,
+            unsignedCtx.unsignedValidatorIndex
+        );
+    }
+
+  function _verifyCommittedMajority(bytes32 voteHash, uint256[3][] memory sigs)
+        internal
+        view
+        returns (uint256 signedStakePower, uint256 committedTotalPower)
+    {
+        IValidatorSetCommitment commitment = validatorSetCommitment;
+        committedTotalPower = commitment.totalPower();
+        require(committedTotalPower > 0, "empty committed set");
+
+        address lastAdd;
         for (uint256 i = 0; i < sigs.length; ++i) {
             address signer = ECVerify.ecrecovery(voteHash, sigs[i]);
 
@@ -136,20 +237,7 @@ contract StakeManagerExtension is StakeManagerStorage, Initializable, StakeManag
 
             lastAdd = signer;
             signedStakePower = signedStakePower.add(commitment.getSignerPower(signer));
-            unsignedCtx = _fillUnsignedValidators(unsignedCtx, signer);
         }
-
-        unsignedCtx = _fillUnsignedValidators(unsignedCtx, address(0));
-
-        return _increaseRewardAndAssertConsensus(
-            blockInterval,
-            proposer,
-            signedStakePower,
-            committedTotalPower,
-            stateRoot,
-            unsignedCtx.unsignedValidators,
-            unsignedCtx.unsignedValidatorIndex
-        );
     }
 
     function _fillUnsignedValidators(

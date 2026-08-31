@@ -25,4 +25,10 @@ contract StakeManagerStorageExtension {
 
     address public stateSender;
     address public childStakeHub;
+
+    bool public rootSlashRelayEnabled;
+    uint256 public slashRelayNonce;
+    mapping(bytes32 => bool) public executedSlashEvidence;
+    uint256 public downtimeSlashAmount;
+    uint256 public felonySlashAmount;
 }

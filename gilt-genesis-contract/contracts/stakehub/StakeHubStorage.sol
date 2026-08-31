@@ -350,6 +350,13 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     event ValidatorSlashed(
         address indexed operatorAddress, uint256 jailUntil, uint256 slashAmount, SlashType slashType
     );
+    event RootSlashIntent(
+        uint256 indexed rootValidatorId,
+        address indexed consensusAddress,
+        uint8 slashType,
+        bytes32 evidenceRef,
+        uint256 finalizedHeight
+    );
     event ValidatorJailed(address indexed operatorAddress);
     event ValidatorEmptyJailed(address indexed operatorAddress);
     event ValidatorUnjailed(address indexed operatorAddress);

@@ -5,5 +5,15 @@
     "outputs": [{"internalType": "address", "name": "", "type": "address"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "bytes", "name": "data", "type": "bytes"},
+      {"internalType": "uint256[3][]", "name": "sigs", "type": "uint256[3][]"}
+    ],
+    "name": "relaySlash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   }
 ]

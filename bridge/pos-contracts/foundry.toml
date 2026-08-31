@@ -25,6 +25,9 @@ fs_permissions = [
 ]
 auto_detect_solc = true
 
+[profile.slashrelay]
+test = "test/unitForge/staking/SlashRelay.t.sol"
+via_ir = false
 
 [invariant]
 fail_on_revert = false

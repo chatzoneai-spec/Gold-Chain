@@ -551,6 +551,24 @@ contract StakeManager is
         _maybeSyncRootStake(validatorId);
     }
 
+    function setRootSlashRelayEnabled(bool enabled) external onlyGovernance {
+        rootSlashRelayEnabled = enabled;
+    }
+
+    function setSlashAmounts(uint256 _downtimeSlashAmount, uint256 _felonySlashAmount) external onlyGovernance {
+        require(_downtimeSlashAmount > 0, "zero downtime slash");
+        require(_felonySlashAmount > 0, "zero felony slash");
+        downtimeSlashAmount = _downtimeSlashAmount;
+        felonySlashAmount = _felonySlashAmount;
+    }
+
+    function relaySlash(bytes calldata data, uint256[3][] calldata sigs) external {
+        delegatedFwd(
+            extensionCode,
+            abi.encodeWithSelector(StakeManagerExtension(extensionCode).relaySlash.selector, data, sigs)
+        );
+    }
+
     function checkSignatures(
         uint256 blockInterval,
         bytes32 voteHash,

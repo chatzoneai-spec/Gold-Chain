@@ -20,5 +20,17 @@
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "internalType": "uint256", "name": "rootValidatorId", "type": "uint256"},
+      {"indexed": true, "internalType": "address", "name": "consensusAddress", "type": "address"},
+      {"indexed": false, "internalType": "uint8", "name": "slashType", "type": "uint8"},
+      {"indexed": false, "internalType": "bytes32", "name": "evidenceRef", "type": "bytes32"},
+      {"indexed": false, "internalType": "uint256", "name": "finalizedHeight", "type": "uint256"}
+    ],
+    "name": "RootSlashIntent",
+    "type": "event"
   }
 ]

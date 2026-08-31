@@ -77,6 +77,11 @@ func NewProcessorService(
 	commitmentProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "commitment", commitmentProcessor)
 	commitmentProcessor.cliCtx = txBroadcaster.CliCtx
 
+	// initialize slash processor
+	slashProcessor := NewSlashProcessor()
+	slashProcessor.BaseProcessor = *NewBaseProcessor(cdc, queueConnector, httpClient, txBroadcaster, "slash", slashProcessor)
+	slashProcessor.cliCtx = txBroadcaster.CliCtx
+
 	//
 	// Select processors
 	//
@@ -92,6 +97,7 @@ func NewProcessorService(
 			feeProcessor,
 			stakingProcessor,
 			commitmentProcessor,
+			slashProcessor,
 		)
 	} else {
 		for _, service := range onlyServices {
@@ -106,6 +112,8 @@ func NewProcessorService(
 				processorService.processors = append(processorService.processors, stakingProcessor)
 			case "commitment":
 				processorService.processors = append(processorService.processors, commitmentProcessor)
+			case "slash":
+				processorService.processors = append(processorService.processors, slashProcessor)
 			}
 		}
 	}

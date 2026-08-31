@@ -59,6 +59,7 @@ type IContractCaller interface {
 	CurrentHeaderBlock(rootChainInstance *rootchain.Rootchain, childBlockInterval uint64) (uint64, error)
 	GetBalance(address common.Address) (*big.Int, error)
 	SendCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress common.Address, rootChainInstance *rootchain.Rootchain) (err error)
+	SendSlashRelay(data []byte, sigs [][3]*big.Int, stakeManagerAddress common.Address) error
 	GetCheckpointSign(txHash common.Hash) ([]byte, []byte, []byte, error)
 	GetMainChainBlock(*big.Int) (*ethTypes.Header, error)
 	GetGiltChainBlock(context.Context, *big.Int) (*ethTypes.Header, error)

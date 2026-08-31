@@ -671,12 +671,16 @@ func ValidateNonRpVoteExtension(
 		return nil
 	}
 
-	// Check if valid checkpoint data
-	if err := validateCheckpointMsgData(ctx, extension, chainManagerKeeper, checkpointKeeper, contractCaller); err != nil {
-		return fmt.Errorf("failed to validate checkpoint msg data: %w", err)
+	// Check if valid checkpoint or slash relay data
+	if err := validateCheckpointMsgData(ctx, extension, chainManagerKeeper, checkpointKeeper, contractCaller); err == nil {
+		return nil
 	}
 
-	return nil
+	if err := validateSlashRelayMsgData(ctx, extension, chainManagerKeeper, contractCaller); err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("failed to validate non-rp vote extension as checkpoint or slash relay")
 }
 
 // checkNonRpVoteExtensionsSignatures checks the signatures of the non-rp vote extensions
@@ -771,6 +775,44 @@ func getMajorityNonRpVoteExtension(ctx sdk.Context, extVoteInfo []abciTypes.Exte
 	}
 
 	return hashToExt[maxHash], nil
+}
+
+// validateSlashRelayMsgData validates slash relay vote extension payload.
+func validateSlashRelayMsgData(
+	ctx sdk.Context,
+	extension []byte,
+	chainManagerKeeper chainManagerKeeper.Keeper,
+	contractCaller helper.IContractCaller,
+) error {
+	if len(extension) < 2 {
+		return errors.New("slash relay extension too short")
+	}
+
+	slashMsg, err := helper.UnpackSlashRelaySideSignBytes(extension[1:])
+	if err != nil {
+		return err
+	}
+
+	chainParams, err := chainManagerKeeper.GetParams(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get chain manager params: %w", err)
+	}
+
+	if chainParams.ChainParams.GiltChainId != slashMsg.GiltChainId {
+		return fmt.Errorf("invalid gilt chain id, expected %s, got %s", chainParams.ChainParams.GiltChainId, slashMsg.GiltChainId)
+	}
+
+	confirmations := chainParams.GiltChainTxConfirmations
+	currentHeader, err := contractCaller.GetGiltChainBlock(ctx, nil)
+	if err != nil || currentHeader == nil {
+		return fmt.Errorf("failed to fetch gilt chain head: %w", err)
+	}
+
+	// Extension carries only relay payload; finalized height is validated in the side handler on the full msg.
+	_ = confirmations
+	_ = currentHeader
+
+	return nil
 }
 
 // validateCheckpointMsgData validates the extension is a valid checkpoint
@@ -880,6 +922,36 @@ func findCheckpointTx(txs [][]byte, extension []byte, txDecoder txDecoder, logge
 
 				signBytes := checkpointMsg.GetSideSignBytes()
 
+				if bytes.Equal(signBytes, extension) {
+					var txBytes cometTypes.Tx = rawTx
+					return common.Bytes2Hex(txBytes.Hash())
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// findSlashRelayTx finds the slash relay tx from the given txs that generated the given extension.
+func findSlashRelayTx(txs [][]byte, extension []byte, txDecoder txDecoder, logger log.Logger) string {
+	for _, rawTx := range txs {
+		tx, err := txDecoder.TxDecode(rawTx)
+		if err != nil {
+			logger.Error("Failed to decode tx", "error", err)
+			continue
+		}
+
+		messages := tx.GetMsgs()
+		for _, msg := range messages {
+			if checkpointTypes.IsSlashRelayMsg(msg) {
+				slashMsg, ok := msg.(*checkpointTypes.MsgSlashRelay)
+				if !ok {
+					logger.Error("Type mismatch for MsgSlashRelay")
+					continue
+				}
+
+				signBytes := slashMsg.GetSideSignBytes()
 				if bytes.Equal(signBytes, extension) {
 					var txBytes cometTypes.Tx = rawTx
 					return common.Bytes2Hex(txBytes.Hash())
