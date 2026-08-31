@@ -27,7 +27,7 @@ func TestDefaultParams(t *testing.T) {
 		require.Equal(t, uint64(6), params.MainChainTxConfirmations)
 		require.Equal(t, uint64(10), params.GiltChainTxConfirmations)
 		require.NotEmpty(t, params.ChainParams.StateReceiverAddress)
-		require.NotEmpty(t, params.ChainParams.ValidatorSetAddress)
+		require.NotEmpty(t, params.ChainParams.SlashManagerAddress)
 	})
 }
 
@@ -41,7 +41,7 @@ func TestNewParams(t *testing.T) {
 			GiltChainId:          "137",
 			GiltConsensusChainId: "giltconsensus-137",
 			StateReceiverAddress: "0x0000000000000000000000000000000000001001",
-			ValidatorSetAddress:  "0x0000000000000000000000000000000000001000",
+			SlashManagerAddress:  "0x0000000000000000000000000000000000001000",
 		}
 
 		params := types.NewParams(10, 20, chainParams)
@@ -56,7 +56,7 @@ func TestNewParams(t *testing.T) {
 
 		chainParams := types.ChainParams{
 			StateReceiverAddress: "0x0000000000000000000000000000000000001001",
-			ValidatorSetAddress:  "0x0000000000000000000000000000000000001000",
+			SlashManagerAddress:  "0x0000000000000000000000000000000000001000",
 		}
 
 		params := types.NewParams(0, 0, chainParams)
@@ -139,16 +139,16 @@ func TestParams_ValidateBasic(t *testing.T) {
 		require.Contains(t, err.Error(), "state_receiver_address")
 	})
 
-	t.Run("rejects invalid validator set address", func(t *testing.T) {
+	t.Run("rejects invalid slash manager address", func(t *testing.T) {
 		t.Parallel()
 
 		chainParams := validChainParams()
-		chainParams.ValidatorSetAddress = "0x"
+		chainParams.SlashManagerAddress = "0x"
 		params := types.NewParams(6, 10, chainParams)
 
 		err := params.ValidateBasic()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "validator_set_address")
+		require.Contains(t, err.Error(), "slash_manager_address")
 	})
 
 	t.Run("all addresses must be valid if provided", func(t *testing.T) {
@@ -186,7 +186,6 @@ func validChainParams() types.ChainParams {
 		StakingInfoAddress:   "0x1234567890123456789012345678901234567894",
 		StateSenderAddress:   "0x1234567890123456789012345678901234567895",
 		StateReceiverAddress: "0x1234567890123456789012345678901234567896",
-		ValidatorSetAddress:  "0x1234567890123456789012345678901234567897",
 	}
 }
 
@@ -200,7 +199,7 @@ func TestDefaultConstants(t *testing.T) {
 		require.Equal(t, uint64(10), types.DefaultGiltChainTxConfirmations)
 		require.Equal(t, uint64(6), types.MinMainChainTxConfirmations)
 		require.Equal(t, uint64(10), types.MinGiltChainTxConfirmations)
-		require.Equal(t, "0x0000000000000000000000000000000000001001", types.DefaultStateReceiverAddress)
-		require.Equal(t, "0x0000000000000000000000000000000000001000", types.DefaultValidatorSetAddress)
+		require.Equal(t, "0x0000000000000000000000000000000000003001", types.DefaultStateReceiverAddress)
+		require.Equal(t, "0x0000000000000000000000000000000000000000", types.DefaultSlashManagerAddress)
 	})
 }

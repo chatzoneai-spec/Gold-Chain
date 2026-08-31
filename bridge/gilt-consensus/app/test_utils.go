@@ -204,6 +204,15 @@ func setupAppWithValidatorSet(t *testing.T, validatorPrivKeys []cmtcrypto.PrivKe
 	return app, db, logger, sortValidatorPrivKeysBySigner(validatorPrivKeys)
 }
 
+func validatorPrivKeysBySigner(privKeys []cmtcrypto.PrivKey) map[string]cmtcrypto.PrivKey {
+	bySigner := make(map[string]cmtcrypto.PrivKey, len(privKeys))
+	for _, privKey := range privKeys {
+		signer := addressUtils.FormatAddress(privKey.PubKey().Address().String())
+		bySigner[signer] = privKey
+	}
+	return bySigner
+}
+
 func sortValidatorPrivKeysBySigner(privKeys []cmtcrypto.PrivKey) []cmtcrypto.PrivKey {
 	sorted := append([]cmtcrypto.PrivKey(nil), privKeys...)
 	sort.Slice(sorted, func(i, j int) bool {

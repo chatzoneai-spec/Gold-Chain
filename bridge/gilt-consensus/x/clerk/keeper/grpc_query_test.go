@@ -185,7 +185,6 @@ func (s *KeeperTestSuite) TestGetLatestRecordIdReflectsRootCounterNotPersistence
 		StakingInfoAddress:   "0x0000000000000000000000000000000000000015",
 		StateSenderAddress:   "0x0000000000000000000000000000000000000016",
 		StateReceiverAddress: "0x0000000000000000000000000000000000000017",
-		ValidatorSetAddress:  "0x0000000000000000000000000000000000000018",
 	})
 	s.chainKeeper.EXPECT().GetParams(gomock.Any()).Return(params, nil).Times(1)
 
