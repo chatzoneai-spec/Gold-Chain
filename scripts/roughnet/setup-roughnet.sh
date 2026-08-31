@@ -79,8 +79,13 @@ for k in list(g['alloc'].keys()):
     if k.lower() == old:
         del g['alloc'][k]
 fund_hex = hex(10000 * 10**18)
+system_senders = [
+    '0x0000000000000000000000000000000000001007',  # GovHub
+    '0x0000000000000000000000000000000000003001',  # StateReceiver
+]
 for addr in json.load(open('$WALLETS/evm-wallets.json')):
-    a = addr['address']
+    system_senders.append(addr['address'])
+for a in system_senders:
     entry = {}
     for k in list(g['alloc'].keys()):
         if k.lower() == a.lower():

@@ -115,6 +115,28 @@ async function tryEthSendTransaction(from, calldata) {
   return { ok: true, txHash: body.result };
 }
 
+async function waitForReceipt(txHash, timeoutMs = 120000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (receipt) return receipt;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`Timed out waiting for tx ${txHash}`);
+}
+
+async function sendAndWait(from, calldata, label) {
+  const send = await tryEthSendTransaction(from, calldata);
+  if (!send.ok) {
+    return send;
+  }
+  const receipt = await waitForReceipt(send.txHash);
+  if (receipt.status !== 1 && receipt.status !== 1n) {
+    return { ok: false, error: `${label} reverted: ${send.txHash}` };
+  }
+  return { ok: true, txHash: send.txHash };
+}
+
 async function getPooledGilt(credit) {
   const creditContract = new ethers.Contract(credit, stakeCreditAbi, provider);
   try {
@@ -163,7 +185,7 @@ async function main() {
     const rootAmount =
       process.env.ROOT_AMOUNT_WEI != null
         ? BigInt(process.env.ROOT_AMOUNT_WEI)
-        : pooledGilt;
+        : pooledGilt + BigInt(3000) * BigInt(10 ** 18);
     report.push(`root_amount_target=${rootAmount.toString()}`);
 
     const rootAnchoredSlot = await provider.getStorage(STAKE_HUB, 262n);
@@ -213,25 +235,15 @@ async function main() {
     // Step 1: giltStakeFreezeEnabled
     const step1Call = await ethCallFrom(GOV_HUB, freezeCalldata);
     report.push(`step1_eth_call=${step1Call.ok ? 'ok' : step1Call.error}`);
-    const step1Send = await tryEthSendTransaction(GOV_HUB, freezeCalldata);
+    const step1Send = await sendAndWait(GOV_HUB, freezeCalldata, 'step1');
     report.push(`step1_eth_sendTransaction=${step1Send.ok ? step1Send.txHash : step1Send.error}`);
-    const step1Unlocked = await tryUnlockedSend(GOV_HUB, freezeCalldata);
-    report.push(`step1_cast_unlocked=${step1Unlocked.ok ? step1Unlocked.txHash : step1Unlocked.error}`);
-    if (!step1Call.ok) {
-      blocker = `step1 updateParam giltStakeFreezeEnabled: ${step1Call.error}`;
-    } else if (!step1Send.ok && !step1Unlocked.ok) {
-      blocker = `step1 GOV_HUB sender unavailable: eth_sendTransaction=${step1Send.error}; cast_unlocked=${step1Unlocked.error}`;
-    } else if (step1Send.ok) {
-      txHashes.step1 = step1Send.txHash;
-    } else if (step1Unlocked.ok) {
-      txHashes.step1 = step1Unlocked.txHash;
-    }
+    if (step1Send.ok) txHashes.step1 = step1Send.txHash;
 
     // Step 2: takeGiltCutoverSnapshot
     const step2Call = await ethCallFrom(GOV_HUB, snapshotCalldata);
     report.push(`step2_eth_call=${step2Call.ok ? 'ok' : step2Call.error}`);
     if (step2Call.ok) {
-      const step2Send = await tryEthSendTransaction(GOV_HUB, snapshotCalldata);
+      const step2Send = await sendAndWait(GOV_HUB, snapshotCalldata, 'step2');
       report.push(`step2_eth_sendTransaction=${step2Send.ok ? step2Send.txHash : step2Send.error}`);
       if (step2Send.ok) txHashes.step2 = step2Send.txHash;
     }
@@ -239,20 +251,27 @@ async function main() {
     // Step 3: rootAnchoredGiltStakingEnabled
     const step3Call = await ethCallFrom(GOV_HUB, rootAnchoredCalldata);
     report.push(`step3_eth_call=${step3Call.ok ? 'ok' : step3Call.error}`);
+    if (step3Call.ok) {
+      const step3Send = await sendAndWait(GOV_HUB, rootAnchoredCalldata, 'step3');
+      report.push(`step3_eth_sendTransaction=${step3Send.ok ? step3Send.txHash : step3Send.error}`);
+      if (step3Send.ok) txHashes.step3 = step3Send.txHash;
+    }
 
     // Step 4: onStateReceive from STATE_RECEIVER (user-locked cast pattern)
     const step4Call = await ethCallFrom(STATE_RECEIVER, onStateCalldata);
     report.push(`step4_eth_call=${step4Call.ok ? 'ok' : step4Call.error}`);
-    const step4Send = await tryEthSendTransaction(STATE_RECEIVER, onStateCalldata);
+    const step4Send = await sendAndWait(STATE_RECEIVER, onStateCalldata, 'step4');
     report.push(`step4_eth_sendTransaction=${step4Send.ok ? step4Send.txHash : step4Send.error}`);
-    if (!step4Send.ok) {
-      const step4Unlocked = await tryUnlockedSend(STATE_RECEIVER, onStateCalldata, 'step4');
-      report.push(`step4_cast_unlocked=${step4Unlocked.ok ? step4Unlocked.txHash : step4Unlocked.error}`);
-    }
+    if (step4Send.ok) txHashes.step4 = step4Send.txHash;
 
-    // Step 5: cutoverValidatorToRoot (any unlocked wallet; permissionless after prep)
+    // Step 5: cutoverValidatorToRoot(operator)
     const step5Call = await ethCallFrom(operator, cutoverCalldata);
     report.push(`step5_eth_call=${step5Call.ok ? 'ok' : step5Call.error}`);
+    if (step5Call.ok) {
+      const step5Send = await sendAndWait(operator, cutoverCalldata, 'step5');
+      report.push(`step5_eth_sendTransaction=${step5Send.ok ? step5Send.txHash : step5Send.error}`);
+      if (step5Send.ok) txHashes.step5 = step5Send.txHash;
+    }
 
     // Success checks (only meaningful if cutover bytecode + txs succeeded)
     let flipped = false;
@@ -275,7 +294,9 @@ async function main() {
     }
 
     const electionAfter = await readElectionPower();
+    const pooledAfter = await getPooledGilt(credit);
     report.push(`election_power_after=${electionAfter.toString()}`);
+    report.push(`native_pooled_gilt_after=${pooledAfter.toString()}`);
     report.push(`isGiltCutoverFlipped=${flipped}`);
     report.push(`getRootStakeAmountByConsensus=${rootStake.toString()}`);
 
@@ -286,8 +307,8 @@ async function main() {
       flipped === true &&
       rootStake === rootAmount &&
       electionAfter === expectedRootPower &&
-      pooledGilt > 0n &&
-      electionAfter !== (pooledGilt * stakeWeightA) / 10000n;
+      pooledAfter > 0n &&
+      electionAfter !== (pooledAfter * stakeWeightA) / 10000n;
 
     if (allChecks) {
       status = 'PASS';
