@@ -31,5 +31,17 @@ stop_pid_file() {
   echo "$name: killed pid $pid"
 }
 
+stop_giltconsd_only() {
+  for idx in 0 1 2 3; do
+    stop_pid_file "giltconsd-node${idx}" "$ROUGHNET/giltconsd-node${idx}.pid"
+  done
+  stop_pid_file giltconsd "$ROUGHNET/giltconsd.pid"
+}
+
+if [[ "${1:-}" == "--giltconsd-only" ]]; then
+  stop_giltconsd_only
+  exit 0
+fi
+
 stop_pid_file geth "$ROUGHNET/geth.pid"
-stop_pid_file giltconsd "$ROUGHNET/giltconsd.pid"
+stop_giltconsd_only

@@ -105,38 +105,7 @@ rm -rf "$TESTNET_GEN"
   --home "$GILTCONS_HOME" \
   --allow-duplicate-ip
 
-rm -rf "$GILTCONS_HOME"
-cp -a "$TESTNET_GEN/node0/giltconsd" "$GILTCONS_HOME"
-
-python3 - <<'PY'
-import json
-from pathlib import Path
-
-home = Path('/workspace/.tmp/roughnet/giltconsd')
-genesis = json.loads((home / 'config/genesis.json').read_text())
-cm = genesis['app_state']['chainmanager']['params']['chain_params']
-cm['gilt_chain_id'] = '714'
-cm['giltconsensus_chain_id'] = 'giltconsensus-714'
-for span in genesis['app_state'].get('gilt', {}).get('spans', []):
-    span['gilt_chain_id'] = '714'
-(home / 'config/genesis.json').write_text(json.dumps(genesis, indent= 2) + '\n')
-
-for name in ('app.toml', 'config.toml', 'client.toml'):
-    text = (home / 'config' / name).read_text()
-    text = text.replace('http://localhost:9545', 'http://127.0.0.1:8545')
-    text = text.replace('http://localhost:8545', 'http://127.0.0.1:8545')
-    text = text.replace('http://0.0.0.0:26657', 'http://127.0.0.1:26657')
-    text = text.replace('tcp://0.0.0.0:26656', 'tcp://127.0.0.1:26656')
-    text = text.replace('tcp://0.0.0.0:26657', 'tcp://127.0.0.1:26657')
-    text = text.replace('pex = true', 'pex = false')
-    text = text.replace('max_num_inbound_peers = 100', 'max_num_inbound_peers = 0')
-    text = text.replace('max_num_inbound_peers = 40', 'max_num_inbound_peers = 0')
-    text = text.replace('max_num_outbound_peers = 10', 'max_num_outbound_peers = 0')
-    import re
-    text = re.sub(r'^seeds = ".*"$', 'seeds = ""', text, flags=re.M)
-    text = re.sub(r'^persistent_peers = ".*"$', 'persistent_peers = ""', text, flags=re.M)
-    (home / 'config' / name).write_text(text)
-PY
+"$ROOT/scripts/roughnet/configure-giltconsd-cluster.sh"
 
 cat > "$ROUGHNET/roughnet-public.json" <<EOF
 {
