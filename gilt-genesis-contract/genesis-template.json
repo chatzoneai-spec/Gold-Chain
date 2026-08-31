@@ -149,6 +149,14 @@
       "balance": "0x0",
       "code": "{{stakeHubValidatorViewsModule}}"
     },
+    "0x0000000000000000000000000000000000002019": {
+      "balance": "0x0",
+      "code": "{{stakeHubRootStakeModule}}"
+    },
+    "0x000000000000000000000000000000000000201A": {
+      "balance": "0x0",
+      "code": "{{stakeHubGiltCutoverModule}}"
+    },
     "0x0000000000000000000000000000000000002003": {
       "balance": "0x0",
       "code": "{{stakeCredit}}"
