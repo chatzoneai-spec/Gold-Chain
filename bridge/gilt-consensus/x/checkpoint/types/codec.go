@@ -15,7 +15,7 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	legacy.RegisterAminoMsg(cdc, &MsgCpAck{}, "gilt/checkpoint/MsgCpAck")
 	legacy.RegisterAminoMsg(cdc, &MsgCpNoAck{}, "gilt/checkpoint/MsgCpNoAck")
 	legacy.RegisterAminoMsg(cdc, &MsgUpdateParams{}, "gilt/checkpoint/MsgUpdateParams")
-	legacy.RegisterAminoMsg(cdc, &MsgSlashRelay{}, "giltconsensusv2/checkpoint/MsgSlashRelay")
+	legacy.RegisterAminoMsg(cdc, &MsgSlashRelay{}, "gilt/checkpoint/MsgSlashRelay")
 }
 
 // RegisterInterfaces registers the x/checkpoint interfaces types with the interface registry

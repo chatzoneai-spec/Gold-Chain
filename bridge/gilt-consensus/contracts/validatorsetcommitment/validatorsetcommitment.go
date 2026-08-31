@@ -27,10 +27,7 @@ func init() {
 
 // NewValidatorSetCommitment binds to a deployed ValidatorSetCommitment contract.
 func NewValidatorSetCommitment(address common.Address, backend bind.ContractBackend) (*ValidatorSetCommitment, error) {
-	contract, err := bind.NewBoundContract(address, ParsedABI, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
+	contract := bind.NewBoundContract(address, ParsedABI, backend, backend, backend)
 	return &ValidatorSetCommitment{
 		ValidatorSetCommitmentCaller:     ValidatorSetCommitmentCaller{contract: contract},
 		ValidatorSetCommitmentTransactor: ValidatorSetCommitmentTransactor{contract: contract},

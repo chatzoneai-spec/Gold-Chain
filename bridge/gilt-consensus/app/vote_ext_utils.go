@@ -788,7 +788,7 @@ func validateSlashRelayMsgData(
 		return errors.New("slash relay extension too short")
 	}
 
-	slashMsg, err := helper.UnpackSlashRelaySideSignBytes(extension[1:])
+	slashMsg, err := checkpointTypes.UnpackSlashRelaySideSignBytes(extension[1:])
 	if err != nil {
 		return err
 	}

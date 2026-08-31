@@ -68,7 +68,7 @@ func (sp *StakingProcessor) sendStakedToGiltConsensus(eventName string, logBytes
 		return err
 	}
 	staked := event.(*stakinginfo.StakinginfoStaked)
-	pubKey := secp256k1.PubKey{Key: normalizeRootPubKey(staked.SignerPubkey)}
+	pubKey := &secp256k1.PubKey{Key: normalizeRootPubKey(staked.SignerPubkey)}
 
 	msg, err := stakeTypes.NewMsgValidatorJoin(
 		staked.Signer.Hex(),
@@ -228,8 +228,10 @@ func (sp *StakingProcessor) broadcastStakeMsg(msg types.Msg, event interface{}, 
 		return nil
 	}
 
-	if err := msg.ValidateBasic(); err != nil {
-		return err
+	if validatable, ok := msg.(interface{ ValidateBasic() error }); ok {
+		if err := validatable.ValidateBasic(); err != nil {
+			return err
+		}
 	}
 
 	sp.Logger.Info("StakingProcessor: broadcasting root-derived stake msg",
@@ -261,5 +263,5 @@ func (sp *StakingProcessor) nextRootStakeNonce(validatorID uint64) (uint64, erro
 }
 
 func normalizeRootPubKey(pubKey []byte) []byte {
-	return helper.AppendPrefix(pubKey)
+	return util.AppendPrefix(pubKey)
 }
