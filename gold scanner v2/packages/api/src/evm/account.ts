@@ -1,4 +1,4 @@
-import { requireHexAddress } from "../validate.js";
+import { requireHexAddress, requireHexHash } from "../validate.js";
 import type { ApiContext } from "./types.js";
 import { empty, notOk, ok } from "./response.js";
 import { parsePagination, sqlLimitOffset } from "./pagination.js";
@@ -166,7 +166,8 @@ async function accountTokenTx(
   ctx: ApiContext,
   standard: "erc20" | "erc721" | "erc1155",
 ) {
-  const address = requireAddress(params);
+  const txhashParam = params.get("txhash")?.trim().toLowerCase();
+  const address = txhashParam ? null : requireAddress(params);
 
   const contractAddress = params.get("contractaddress")?.trim().toLowerCase();
   const { start, end } = parseBlockRange(params);
@@ -174,11 +175,28 @@ async function accountTokenTx(
   const { limit, offset } = sqlLimitOffset(pagination);
   const order = sortOrder(params);
 
-  const values: unknown[] = [start, end, address, standard, limit, offset];
-  let contractFilter = "";
+  const values: unknown[] = [start, end, standard, limit, offset];
+  const filters = [
+    "tt.finality_status <> 'reverted'",
+    "b.finality_status <> 'reverted'",
+    "tt.token_standard = $3",
+    "tt.block_number BETWEEN $1 AND $2",
+  ];
+
+  if (address) {
+    values.push(address);
+    filters.push(`(tt.from_address = $${values.length} OR tt.to_address = $${values.length})`);
+  }
+
+  if (txhashParam) {
+    requireHexHash(txhashParam, "txhash");
+    values.push(txhashParam);
+    filters.push(`tt.transaction_hash = $${values.length}`);
+  }
+
   if (contractAddress) {
-    contractFilter = "AND tt.contract_address = $7";
     values.push(contractAddress);
+    filters.push(`tt.contract_address = $${values.length}`);
   }
 
   const { rows } = await ctx.pool.query(
@@ -189,14 +207,9 @@ async function accountTokenTx(
      FROM token_transfers tt
      JOIN blocks b ON b.number = tt.block_number
      JOIN token_contracts tc ON tc.address = tt.contract_address
-     WHERE tt.finality_status <> 'reverted'
-       AND b.finality_status <> 'reverted'
-       AND tt.token_standard = $4
-       AND tt.block_number BETWEEN $1 AND $2
-       AND (tt.from_address = $3 OR tt.to_address = $3)
-       ${contractFilter}
+     WHERE ${filters.join(" AND ")}
      ORDER BY tt.block_number ${order}, tt.log_index ${order}
-     LIMIT $5 OFFSET $6`,
+     LIMIT $4 OFFSET $5`,
     values,
   );
 

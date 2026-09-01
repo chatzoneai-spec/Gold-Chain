@@ -1,6 +1,7 @@
 import { handleAccountModule } from "./account.js";
 import { handleContractModule } from "./contract.js";
 import { handleLogsModule } from "./logs.js";
+import { handleStatsModule } from "./stats.js";
 import { handleTokenModule } from "./token.js";
 import {
   getTransactionByHash,
@@ -26,6 +27,7 @@ const MODULE_HANDLERS: Record<
   logs: handleLogsModule,
   token: handleTokenModule,
   contract: handleContractModule,
+  stats: handleStatsModule,
 };
 
 export async function dispatchEvmApi(

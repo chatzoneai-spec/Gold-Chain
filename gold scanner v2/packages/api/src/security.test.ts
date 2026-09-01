@@ -39,10 +39,16 @@ async function request(
   port: number,
   method: string,
   target: string,
+  body?: unknown,
 ): Promise<{ status: number; body: string }> {
-  const response = await fetch(`http://127.0.0.1:${port}${target}`, { method });
-  const body = await response.text();
-  return { status: response.status, body };
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "content-type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const response = await fetch(`http://127.0.0.1:${port}${target}`, init);
+  const text = await response.text();
+  return { status: response.status, body: text };
 }
 
 describe("api security", () => {
@@ -104,10 +110,26 @@ describe("api security", () => {
     assert.match(body, /method_not_allowed/);
   });
 
-  it("rejects POST /verify with 405", async () => {
-    const { status, body } = await request(port, "POST", "/verify");
-    assert.equal(status, 405);
-    assert.match(body, /method_not_allowed/);
+  it("verify rejects path traversal compilerVersion with 400", async () => {
+    const { status, body } = await request(port, "POST", "/verify", {
+      address: "0x0000000000000000000000000000000000000a01",
+      source: "pragma solidity ^0.8.20; contract X {}",
+      compilerVersion: "v0.8.20/../../etc/passwd",
+    });
+    assert.equal(status, 400);
+    assert.match(body, /invalid_compiler_version/);
+  });
+
+  it("verify still does not INSERT chain-derived rows", async () => {
+    const handlerFiles = collectSourceFiles(apiSrcDir);
+    for (const file of handlerFiles) {
+      const source = readFileSync(file, "utf8");
+      assert.doesNotMatch(
+        source,
+        /\bINSERT\s+INTO\s+(blocks|transactions|token_transfers|bridge_transfers|gold_supply|staking_events|validator_events|governance_events|checkpoints|token_balances)\b/i,
+        `${file} must not INSERT chain-derived rows`,
+      );
+    }
   });
 
   it("returns 400 for bad hex address without 500", async () => {
@@ -187,7 +209,7 @@ describe("api security", () => {
       const source = readFileSync(file, "utf8");
       assert.doesNotMatch(
         source,
-        /\bINSERT\s+INTO\s+(blocks|transactions|token_transfers|bridge_transfers|gold_supply)\b/i,
+        /\bINSERT\s+INTO\s+(blocks|transactions|token_transfers|bridge_transfers|gold_supply|staking_events|validator_events|governance_events|checkpoints|token_balances)\b/i,
         `${file} must not INSERT chain-derived rows`,
       );
     }

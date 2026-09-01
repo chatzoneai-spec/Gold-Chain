@@ -18,7 +18,11 @@ import {
   fetchStakingEvents,
   fetchValidatorEvents,
 } from "./queries.js";
+import { computeCheckpointStatus } from "./checkpoint-status.js";
+import { computeDelegations } from "./delegations.js";
+import { computeGovernanceBoard } from "./governance-board.js";
 import { computeSolvency } from "./solvency.js";
+import { computeValidatorSet } from "./validator-set.js";
 import { requireHexHash } from "../validate.js";
 
 export { createGoldRouteRegistry, dispatchGoldGet, sendJsonResponse } from "./app.js";
@@ -106,6 +110,26 @@ function registerGoldRoutesOnRegistry(
   app.get(
     "/gold/migration-status",
     withPool(pool, async (client) => fetchMigrationStatus(client)),
+  );
+
+  app.get(
+    "/gold/validator-set",
+    withPool(pool, async (client) => computeValidatorSet(client)),
+  );
+
+  app.get(
+    "/gold/delegations",
+    withPool(pool, async (client) => computeDelegations(client)),
+  );
+
+  app.get(
+    "/gold/checkpoint-status",
+    withPool(pool, async (client) => computeCheckpointStatus(client)),
+  );
+
+  app.get(
+    "/gold/governance-board",
+    withPool(pool, async (client) => computeGovernanceBoard(client)),
   );
 }
 

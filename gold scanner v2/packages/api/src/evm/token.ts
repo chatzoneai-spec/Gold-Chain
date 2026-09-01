@@ -1,5 +1,10 @@
 import type { ApiContext } from "./types.js";
 import { notOk, ok } from "./response.js";
+import { tokenHolderList } from "./token-holders.js";
+import {
+  formatTokenInfoRow,
+  resolveTotalSupply,
+} from "./token-supply.js";
 
 export async function handleTokenModule(
   action: string,
@@ -9,8 +14,10 @@ export async function handleTokenModule(
   switch (action.toLowerCase()) {
     case "tokeninfo":
       return tokenInfo(params, ctx);
-    case "getToken":
+    case "gettoken":
       return tokenInfo(params, ctx);
+    case "tokenholderlist":
+      return tokenHolderList(params, ctx);
     default:
       return notOk(`Unknown action: ${action}`);
   }
@@ -37,14 +44,13 @@ async function tokenInfo(params: URLSearchParams, ctx: ApiContext) {
   }
 
   const row = rows[0]!;
-  return ok([
-    {
-      contractAddress: row.address,
-      tokenType: row.type,
-      tokenName: row.name ?? "",
-      symbol: row.symbol ?? "",
-      divisor: row.decimals === null ? "" : String(row.decimals),
-      totalSupply: "",
-    },
-  ]);
+  const tokenidParam = params.get("tokenid");
+  const totalSupply = await resolveTotalSupply(
+    ctx,
+    contractaddress,
+    String(row.type),
+    tokenidParam,
+  );
+
+  return ok([formatTokenInfoRow(row, totalSupply)]);
 }
