@@ -1,7 +1,10 @@
+import "./globals.css";
 import type { Metadata } from "next";
+import { SiteNav } from "@/components/SiteNav";
 
 export const metadata: Metadata = {
   title: "GoldScan",
+  description: "Gold Chain block explorer",
 };
 
 export default function RootLayout({
@@ -11,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="app-shell">
+        <SiteNav />
+        {children}
+      </body>
     </html>
   );
 }
