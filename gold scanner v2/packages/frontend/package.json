@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --import tsx --import ./src/test-setup.ts --test src/**/*.test.ts src/**/*.test.tsx"
+    "test": "node --import tsx --import ./src/test-setup.ts --test 'src/**/*.test.ts' 'src/**/*.test.tsx' 'src/*.test.ts' 'src/*.test.tsx'"
   },
   "dependencies": {
     "next": "^15.2.2",

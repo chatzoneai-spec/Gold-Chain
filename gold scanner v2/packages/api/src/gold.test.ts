@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
+import { XAUT_SCALE } from "../../indexer/src/gold-topics.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import {
   createGoldRouteRegistry,
@@ -75,9 +76,14 @@ describe("gold api", () => {
 
       assert.equal(solvency.paxg.goldTokenId, "1");
       assert.equal(solvency.xaut.goldTokenId, "2");
-      assert.equal(solvency.paxg.lockedOnEthereum, "1000");
+      assert.equal(solvency.paxg.lockedOnEthereum, solvency.paxg.goldSupply);
+      assert.equal(
+        BigInt(solvency.xaut.lockedOnEthereum),
+        BigInt(solvency.xaut.goldSupply) * XAUT_SCALE,
+      );
+      assert.equal(solvency.paxg.lockedOnEthereum, "1150");
       assert.equal(solvency.paxg.goldSupply, "1150");
-      assert.equal(solvency.xaut.lockedOnEthereum, "4000000000001");
+      assert.equal(solvency.xaut.lockedOnEthereum, "12000000000000");
       assert.equal(solvency.xaut.goldSupply, "12");
       assert.notEqual(solvency.paxg.goldSupply, solvency.xaut.goldSupply);
       assert.ok(!("combinedTotalLabelled" in (solvency as SolvencyResult & Record<string, unknown>)));
@@ -169,7 +175,7 @@ describe("gold api", () => {
       registry,
       pool,
       "/gold/redemption-receipts",
-      "?receiptCorrelationId=0xdead",
+      "?receiptCorrelationId=0x00000000000000000000000000000000000000000000000000000000000000de",
     );
     assert.equal(missingReceipt.status, 404);
 

@@ -11,13 +11,13 @@ const MOCK_SOLVENCY: SolvencyResult = {
   paxg: {
     routeAsset: "paxg",
     goldTokenId: "1",
-    lockedOnEthereum: "1000",
+    lockedOnEthereum: "1150",
     goldSupply: "1150",
   },
   xaut: {
     routeAsset: "xaut",
     goldTokenId: "2",
-    lockedOnEthereum: "4000000000001",
+    lockedOnEthereum: "12000000000000",
     goldSupply: "12",
   },
 };
@@ -34,7 +34,7 @@ describe("SolvencyHero", () => {
     assert.match(html, /GOLD token ID 2/);
     assert.match(html, /finalized/);
     assert.match(html, /lockedOnEthereum/);
-    assert.match(html, /1000/);
+    assert.match(html, /1150/);
     assert.match(html, /"goldSupply": "12"|&quot;goldSupply&quot;: &quot;12&quot;/);
     assert.ok(!html.includes("combinedTotal"));
   });

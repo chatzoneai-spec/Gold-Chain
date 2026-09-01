@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
+import { ValidationError, isOversizedQuery } from "../validate.js";
 import { dispatchEvmApi } from "./dispatch.js";
 import type { ApiContext } from "./types.js";
 
@@ -39,12 +40,36 @@ export function createEvmHandler(options: EvmRouteOptions) {
       return true;
     }
 
+    if (isOversizedQuery(url)) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          status: "0",
+          message: "NOTOK",
+          result: "Query string too large",
+        }),
+      );
+      return true;
+    }
+
     void (async () => {
       try {
         const response = await dispatchEvmApi(url.searchParams, ctx);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(response));
       } catch (error) {
+        if (error instanceof ValidationError) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              status: "0",
+              message: "NOTOK",
+              result: error.message,
+            }),
+          );
+          return;
+        }
+
         const message = error instanceof Error ? error.message : "Internal error";
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(

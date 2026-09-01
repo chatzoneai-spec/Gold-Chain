@@ -1,10 +1,10 @@
+import { requireHexAddress } from "../validate.js";
 import type { ApiContext } from "./types.js";
 import { empty, notOk, ok } from "./response.js";
 import { parsePagination, sqlLimitOffset } from "./pagination.js";
 
-function requireAddress(params: URLSearchParams): string | null {
-  const address = params.get("address")?.trim().toLowerCase();
-  return address && address.length > 0 ? address : null;
+function requireAddress(params: URLSearchParams): string {
+  return requireHexAddress(params.get("address"), "address");
 }
 
 function parseBlockRange(params: URLSearchParams): { start: number; end: number } {
@@ -50,9 +50,6 @@ export async function handleAccountModule(
 
 async function accountBalance(params: URLSearchParams, ctx: ApiContext) {
   const address = requireAddress(params);
-  if (!address) {
-    return notOk("Missing address parameter");
-  }
 
   const { rows } = await ctx.pool.query(
     `SELECT gilt_balance::text AS balance FROM addresses WHERE address = $1`,
@@ -68,9 +65,6 @@ async function accountBalance(params: URLSearchParams, ctx: ApiContext) {
 
 async function accountTxList(params: URLSearchParams, ctx: ApiContext) {
   const address = requireAddress(params);
-  if (!address) {
-    return notOk("Missing address parameter");
-  }
 
   const { start, end } = parseBlockRange(params);
   const pagination = parsePagination(params);
@@ -125,9 +119,6 @@ async function accountTxList(params: URLSearchParams, ctx: ApiContext) {
 
 async function accountInternalTxList(params: URLSearchParams, ctx: ApiContext) {
   const address = requireAddress(params);
-  if (!address) {
-    return notOk("Missing address parameter");
-  }
 
   const { start, end } = parseBlockRange(params);
   const pagination = parsePagination(params);
@@ -176,9 +167,6 @@ async function accountTokenTx(
   standard: "erc20" | "erc721" | "erc1155",
 ) {
   const address = requireAddress(params);
-  if (!address) {
-    return notOk("Missing address parameter");
-  }
 
   const contractAddress = params.get("contractaddress")?.trim().toLowerCase();
   const { start, end } = parseBlockRange(params);

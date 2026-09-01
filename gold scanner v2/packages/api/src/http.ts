@@ -2,6 +2,7 @@ import http from "node:http";
 import type { Pool } from "pg";
 import { createEvmHandler } from "./evm/register.js";
 import { createGoldRouteRegistry, registerGoldRoutes, sendJsonResponse } from "./gold/register.js";
+import { ValidationError, isOversizedQuery } from "./validate.js";
 import { createWebSocketFeed, type WebSocketFeed } from "./ws.js";
 
 export interface AppOptions {
@@ -36,6 +37,12 @@ export function createApp(options: AppOptions): GoldScanApp {
 
     const host = req.headers.host ?? "localhost";
     const url = new URL(req.url ?? "/", `http://${host}`);
+
+    if (isOversizedQuery(url)) {
+      sendJsonResponse(res, { status: 400, body: { error: "query_too_large" } });
+      return;
+    }
+
     const goldHandler = goldRegistry.routes.get(url.pathname);
 
     if (goldHandler) {
@@ -44,6 +51,11 @@ export function createApp(options: AppOptions): GoldScanApp {
           const response = await goldHandler(req, url, options.pool);
           sendJsonResponse(res, response);
         } catch (error) {
+          if (error instanceof ValidationError) {
+            sendJsonResponse(res, { status: 400, body: { error: error.message } });
+            return;
+          }
+
           const message = error instanceof Error ? error.message : "Internal error";
           sendJsonResponse(res, { status: 500, body: { error: message } });
         }

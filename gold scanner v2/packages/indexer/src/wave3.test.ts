@@ -201,8 +201,8 @@ describe("wave3 gold indexing", () => {
       assert.equal(rows.length, 1);
       const row = rows[0]!;
       assert.equal(row.amount_exact, false);
-      assert.equal(row.root_amount, "2000000000001");
-      assert.equal(row.child_amount, "2");
+      assert.equal(row.root_amount, "12000000000001");
+      assert.equal(row.child_amount, "12");
       assert.notEqual(
         BigInt(row.root_amount),
         BigInt(row.child_amount) * XAUT_SCALE,

@@ -19,6 +19,7 @@ import {
   fetchValidatorEvents,
 } from "./queries.js";
 import { computeSolvency } from "./solvency.js";
+import { requireHexHash } from "../validate.js";
 
 export { createGoldRouteRegistry, dispatchGoldGet, sendJsonResponse } from "./app.js";
 export { computeSolvency } from "./solvency.js";
@@ -58,7 +59,8 @@ function registerGoldRoutesOnRegistry(
     try {
       const correlationId = url.searchParams.get("receiptCorrelationId");
       if (correlationId) {
-        const receipt = await fetchRedemptionReceiptById(client, correlationId);
+        const normalized = requireHexHash(correlationId, "receiptCorrelationId");
+        const receipt = await fetchRedemptionReceiptById(client, normalized);
         if (!receipt) {
           return { status: 404, body: { error: "not_found" } };
         }

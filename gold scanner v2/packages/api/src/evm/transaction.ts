@@ -1,3 +1,4 @@
+import { requireHexHash } from "../validate.js";
 import type { ApiContext } from "./types.js";
 import { notOk, ok } from "./response.js";
 
@@ -17,10 +18,7 @@ export async function handleTransactionModule(
 }
 
 async function getTxReceiptStatus(params: URLSearchParams, ctx: ApiContext) {
-  const txhash = params.get("txhash")?.trim().toLowerCase();
-  if (!txhash) {
-    return notOk("Missing txhash parameter");
-  }
+  const txhash = requireHexHash(params.get("txhash"), "txhash");
 
   const { rows } = await ctx.pool.query(
     `SELECT t.status, t.finality_status
@@ -40,10 +38,7 @@ async function getTxReceiptStatus(params: URLSearchParams, ctx: ApiContext) {
 }
 
 async function getTxStatus(params: URLSearchParams, ctx: ApiContext) {
-  const txhash = params.get("txhash")?.trim().toLowerCase();
-  if (!txhash) {
-    return notOk("Missing txhash parameter");
-  }
+  const txhash = requireHexHash(params.get("txhash"), "txhash");
 
   const { rows } = await ctx.pool.query(
     `SELECT t.status, t.finality_status, t.block_number
@@ -113,10 +108,7 @@ async function getBlockByNumber(params: URLSearchParams, ctx: ApiContext) {
 }
 
 async function getBlockByHash(params: URLSearchParams, ctx: ApiContext) {
-  const hash = params.get("hash")?.trim().toLowerCase();
-  if (!hash) {
-    return notOk("Missing block hash");
-  }
+  const hash = requireHexHash(params.get("hash"), "block hash");
 
   const { rows } = await ctx.pool.query(
     `SELECT number, hash, parent_hash, timestamp, validator_address,
@@ -150,10 +142,7 @@ export async function getTransactionByHash(
   params: URLSearchParams,
   ctx: ApiContext,
 ) {
-  const txhash = params.get("txhash")?.trim().toLowerCase();
-  if (!txhash) {
-    return notOk("Missing txhash parameter");
-  }
+  const txhash = requireHexHash(params.get("txhash"), "txhash");
 
   const { rows } = await ctx.pool.query(
     `SELECT t.hash, t.block_number, t.from_address, t.to_address, t.value::text,

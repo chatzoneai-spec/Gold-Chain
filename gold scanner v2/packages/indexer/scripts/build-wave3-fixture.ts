@@ -168,6 +168,13 @@ const CHILD = {
 
 const ZERO_TX = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+/** Finalized solvency targets after indexing (confirmation depth 2, head 8). */
+const PAXG_LOCKED_ROOT = 1150n;
+const PAXG_BRIDGE_CHILD = 1000n;
+const XAUT_GOLD_SUPPLY = 12n;
+const XAUT_LOCKED_ROOT = XAUT_GOLD_SUPPLY * 1_000_000_000_000n;
+const XAUT_BAD_ROOT = XAUT_LOCKED_ROOT + 1n;
+
 function block(
   number: number,
   txs: Array<{ hash: string; logs: ReturnType<typeof singleLog>[] }>,
@@ -256,8 +263,7 @@ const blockDefs = [
         hash: TX.b4,
         logs: [
           singleLog(TX.b4, 4, 0, ZERO, USER_A, 1n, 500n),
-          singleLog(TX.b4, 4, 1, ZERO, USER_A, 2n, 10n),
-          singleLog(TX.b4, 4, 2, USER_A, ZERO, 1n, 50n),
+          singleLog(TX.b4, 4, 1, USER_A, ZERO, 1n, 50n),
         ],
       },
     ],
@@ -273,7 +279,7 @@ const blockDefs = [
             5,
             0,
             CORR.paxg,
-            encodeBridge(0, 0, 0, 0, true, 1000n, 1000n, ROOT.paxg, ZERO_TX),
+            encodeBridge(0, 0, 0, 0, true, PAXG_LOCKED_ROOT, PAXG_LOCKED_ROOT, ROOT.paxg, ZERO_TX),
           ),
         ],
       },
@@ -285,9 +291,9 @@ const blockDefs = [
             5,
             0,
             CORR.paxg,
-            encodeBridge(0, 2, 0, 1, true, 1000n, 1000n, ROOT.paxg, CHILD.paxg),
+            encodeBridge(0, 2, 0, 1, true, PAXG_BRIDGE_CHILD, PAXG_BRIDGE_CHILD, ROOT.paxg, CHILD.paxg),
           ),
-          singleLog(TX.b5b, 5, 1, ZERO, USER_A, 1n, 1000n),
+          singleLog(TX.b5b, 5, 1, ZERO, USER_A, 1n, PAXG_BRIDGE_CHILD),
         ],
       },
     ],
@@ -303,7 +309,7 @@ const blockDefs = [
             6,
             0,
             CORR.xaut,
-            encodeBridge(1, 0, 0, 0, true, 2000000000000n, 2n, ROOT.xaut, ZERO_TX),
+            encodeBridge(1, 0, 0, 0, true, XAUT_LOCKED_ROOT, XAUT_GOLD_SUPPLY, ROOT.xaut, ZERO_TX),
           ),
         ],
       },
@@ -315,9 +321,9 @@ const blockDefs = [
             6,
             0,
             CORR.xaut,
-            encodeBridge(1, 2, 0, 1, true, 2000000000000n, 2n, ROOT.xaut, CHILD.xaut),
+            encodeBridge(1, 2, 0, 1, true, XAUT_LOCKED_ROOT, XAUT_GOLD_SUPPLY, ROOT.xaut, CHILD.xaut),
           ),
-          singleLog(TX.b6b, 6, 1, ZERO, USER_A, 2n, 2n),
+          singleLog(TX.b6b, 6, 1, ZERO, USER_A, 2n, XAUT_GOLD_SUPPLY),
         ],
       },
       {
@@ -328,7 +334,7 @@ const blockDefs = [
             6,
             0,
             CORR.xautBad,
-            encodeBridge(1, 0, 0, 0, false, 2000000000001n, 2n, ROOT.xautBad, ZERO_TX),
+            encodeBridge(1, 1, 0, 0, false, XAUT_BAD_ROOT, XAUT_GOLD_SUPPLY, ROOT.xautBad, ZERO_TX),
           ),
         ],
       },
