@@ -7,26 +7,34 @@ import (
 
 	addressCodec "github.com/cosmos/cosmos-sdk/codec/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/ethereum/go-ethereum/common"
 
 	util "github.com/giltchain/gilt-consensus/common/hex"
-	"github.com/giltchain/gilt-consensus/helper"
 )
 
 var _ sdk.Msg = &MsgSlashRelay{}
 
 // MsgSlashRelay packages a finalized child slash for root StakeManager relay.
 type MsgSlashRelay struct {
-	Proposer         string `json:"proposer"`
-	ValidatorId      uint64 `json:"validator_id"`
-	SlashType        uint32 `json:"slash_type"`
-	EvidenceRef      []byte `json:"evidence_ref"`
-	FinalizedHeight  uint64 `json:"finalized_height"`
-	GiltChainId      string `json:"gilt_chain_id"`
+	Proposer         string `protobuf:"bytes,1,opt,name=proposer,proto3" json:"proposer,omitempty"`
+	ValidatorId      uint64 `protobuf:"varint,2,opt,name=validator_id,json=validatorId,proto3" json:"validator_id,omitempty"`
+	SlashType        uint32 `protobuf:"varint,3,opt,name=slash_type,json=slashType,proto3" json:"slash_type,omitempty"`
+	EvidenceRef      []byte `protobuf:"bytes,4,opt,name=evidence_ref,json=evidenceRef,proto3" json:"evidence_ref,omitempty"`
+	FinalizedHeight  uint64 `protobuf:"varint,5,opt,name=finalized_height,json=finalizedHeight,proto3" json:"finalized_height,omitempty"`
+	GiltChainId      string `protobuf:"bytes,6,opt,name=gilt_chain_id,json=giltChainId,proto3" json:"gilt_chain_id,omitempty"`
 }
+
+func (m *MsgSlashRelay) Reset()         { *m = MsgSlashRelay{} }
+func (m *MsgSlashRelay) String() string { return proto.CompactTextString(m) }
+func (*MsgSlashRelay) ProtoMessage()    {}
 
 // MsgSlashRelayResponse is the slash relay tx response.
 type MsgSlashRelayResponse struct{}
+
+func (m *MsgSlashRelayResponse) Reset()         { *m = MsgSlashRelayResponse{} }
+func (m *MsgSlashRelayResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgSlashRelayResponse) ProtoMessage()    {}
 
 // NewMsgSlashRelay creates a slash relay message.
 func NewMsgSlashRelay(
@@ -103,7 +111,7 @@ func (msg MsgSlashRelay) GetSideSignBytes() []byte {
 	}
 
 	evidenceRef := common.BytesToHash(msg.EvidenceRef)
-	data, err := helper.PackSlashRelayData(msg.ValidatorId, uint8(msg.SlashType), evidenceRef, giltChainID)
+	data, err := PackSlashRelayData(msg.ValidatorId, uint8(msg.SlashType), evidenceRef, giltChainID)
 	if err != nil {
 		panic(err)
 	}

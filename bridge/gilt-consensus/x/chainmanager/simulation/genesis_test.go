@@ -50,7 +50,6 @@ func TestRandomizedGenState(t *testing.T) {
 	require.Equal(t, "0x0000000000000000000000001B6cffa2BA517936", cmGenesis.Params.ChainParams.StakingInfoAddress)
 	require.Equal(t, "0x00000000000000000000000030b95fF183c471d4", cmGenesis.Params.ChainParams.StateSenderAddress)
 	require.Equal(t, "0x00000000000000000000000028B621587CB3AD0B", cmGenesis.Params.ChainParams.StateReceiverAddress)
-	require.Equal(t, "0x0000000000000000000000003c04951aa42655d9", cmGenesis.Params.ChainParams.ValidatorSetAddress)
 
 	require.Equal(t, uint64(41), cmGenesis.Params.MainChainTxConfirmations)
 	require.Equal(t, uint64(57), cmGenesis.Params.GiltChainTxConfirmations)

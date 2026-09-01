@@ -37,6 +37,8 @@ func (s *KeeperTestSuite) TestMsgUpdateParams() {
 			input: &types.MsgUpdateParams{
 				Authority: cmKeeper.GetAuthority(),
 				Params: types.Params{
+					MainChainTxConfirmations: 6,
+					GiltChainTxConfirmations: 10,
 					ChainParams: types.ChainParams{
 						SlashManagerAddress: "def",
 					},

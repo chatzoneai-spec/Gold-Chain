@@ -313,23 +313,45 @@ func (s *KeeperTestSuite) TestPostHandleMsgEventRecord() {
 	)
 
 	t.Run("NoResult", func(t *testing.T) {
+		noMsg := types.NewMsgEventRecord(
+			util.FormatAddress(Address1),
+			TxHash1,
+			r.Uint64(),
+			r.Uint64(),
+			r.Uint64(),
+			addrBz2,
+			make([]byte, 0),
+			chainId,
+		)
+
 		// post-handler should fail
-		postHandler(ctx, &msg, sidetxs.Vote_VOTE_NO)
+		postHandler(ctx, &noMsg, sidetxs.Vote_VOTE_NO)
 
 		// there should be no stored event record
-		storedEventRecord, err := ck.GetEventRecord(ctx, id)
+		storedEventRecord, err := ck.GetEventRecord(ctx, noMsg.Id)
 		require.Nil(t, storedEventRecord)
 		require.Error(t, err)
 	})
 
 	t.Run("YesResult", func(t *testing.T) {
+		yesMsg := types.NewMsgEventRecord(
+			util.FormatAddress(Address1),
+			TxHash1,
+			logIndex,
+			blockNumber,
+			id,
+			addrBz2,
+			make([]byte, 0),
+			chainId,
+		)
+
 		// post-handler should succeed
-		postHandler(ctx, &msg, sidetxs.Vote_VOTE_YES)
+		postHandler(ctx, &yesMsg, sidetxs.Vote_VOTE_YES)
 
 		// sequence id
-		blockNumber := new(big.Int).SetUint64(msg.BlockNumber)
+		blockNumber := new(big.Int).SetUint64(yesMsg.BlockNumber)
 		sequence := new(big.Int).Mul(blockNumber, big.NewInt(hmTypes.DefaultLogIndexUnit))
-		sequence.Add(sequence, new(big.Int).SetUint64(msg.LogIndex))
+		sequence.Add(sequence, new(big.Int).SetUint64(yesMsg.LogIndex))
 
 		// check the sequence
 		hasSequence := ck.HasRecordSequence(ctx, sequence.String())

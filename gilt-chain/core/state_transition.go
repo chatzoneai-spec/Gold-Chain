@@ -206,7 +206,14 @@ func TransactionToMessage(tx *types.Transaction, s types.Signer, baseFee *big.In
 	}
 	var err error
 	msg.From, err = types.Sender(s, tx)
-	return msg, err
+	if err != nil {
+		return nil, err
+	}
+	// Dev impersonation sends txs as system contracts (GovHub, StateReceiver) that have bytecode.
+	if _, ok := types.GlobalImpersonation().SenderOverride(tx.Hash()); ok {
+		msg.SkipTransactionChecks = true
+	}
+	return msg, nil
 }
 
 // ApplyMessage computes the new state by applying the given message

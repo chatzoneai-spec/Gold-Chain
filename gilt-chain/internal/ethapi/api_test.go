@@ -503,6 +503,7 @@ func (b testBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBloc
 func (b testBackend) BlobBaseFee(ctx context.Context) *big.Int { return new(big.Int) }
 func (b testBackend) ChainDb() ethdb.Database                  { return b.db }
 func (b testBackend) AccountManager() *accounts.Manager        { return b.accman }
+func (b testBackend) InsecureUnlockAllowed() bool              { return true }
 func (b testBackend) ExtRPCEnabled() bool                      { return false }
 func (b testBackend) RPCGasCap() uint64                        { return 10000000 }
 func (b testBackend) RPCEVMTimeout() time.Duration             { return time.Second }

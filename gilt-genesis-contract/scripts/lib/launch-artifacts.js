@@ -163,6 +163,20 @@ const SYSTEM_PREDEPLOYS = [
     artifactPath: "StakeHubValidatorViews.sol/StakeHubValidatorViews.json",
   },
   {
+    key: "stakeHubRootStakeModule",
+    contract: "StakeHubRootStake",
+    address: "0x0000000000000000000000000000000000002019",
+    classification: PREDEPLOY_CLASSIFICATIONS.ACTIVE_CORE,
+    artifactPath: "StakeHubRootStake.sol/StakeHubRootStake.json",
+  },
+  {
+    key: "stakeHubGiltCutoverModule",
+    contract: "StakeHubGiltCutover",
+    address: "0x000000000000000000000000000000000000201A",
+    classification: PREDEPLOY_CLASSIFICATIONS.ACTIVE_CORE,
+    artifactPath: "StakeHubGiltCutover.sol/StakeHubGiltCutover.json",
+  },
+  {
     key: "stakeCredit",
     contract: "StakeCredit",
     address: "0x0000000000000000000000000000000000002003",

@@ -303,7 +303,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		stopCh:          make(chan struct{}),
 	}
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil}
+	eth.APIBackend = &EthAPIBackend{
+		extRPCEnabled:       stack.Config().ExtRPCEnabled(),
+		allowUnprotectedTxs: stack.Config().AllowUnprotectedTxs,
+		insecureUnlock:      stack.Config().InsecureUnlockAllowed,
+		eth:                 eth,
+		gpo:                 nil,
+	}
 	if eth.APIBackend.allowUnprotectedTxs {
 		log.Info("Unprotected transactions allowed")
 	}

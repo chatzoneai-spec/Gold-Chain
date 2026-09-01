@@ -10,8 +10,13 @@ import (
 )
 
 func validateSignerPubKeyBytes(field string, pubKey []byte) error {
-	_, err := signerAddressFromPubKeyBytes(field, pubKey)
+	_, err := SignerAddressFromPubKey(pubKey)
 	return err
+}
+
+// SignerAddressFromPubKey derives the Ethereum signer address from a root-chain pubkey.
+func SignerAddressFromPubKey(pubKey []byte) (string, error) {
+	return signerAddressFromPubKeyBytes("validator signer public key", pubKey)
 }
 
 func signerAddressFromPubKeyBytes(field string, pubKey []byte) (string, error) {

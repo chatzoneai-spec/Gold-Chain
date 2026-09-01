@@ -56,7 +56,7 @@ func TestImpactOfValidatorOutOfService(t *testing.T) {
 	}
 }
 
-func TestAPIsExposeBorNamespace(t *testing.T) {
+func TestAPIsExposeParliaNamespace(t *testing.T) {
 	apis := (&Parlia{}).APIs(nil)
 	namespaces := make([]string, 0, len(apis))
 	for _, api := range apis {
@@ -64,9 +64,6 @@ func TestAPIsExposeBorNamespace(t *testing.T) {
 	}
 	if !slices.Contains(namespaces, "parlia") {
 		t.Fatalf("expected parlia namespace, got %v", namespaces)
-	}
-	if !slices.Contains(namespaces, "bor") {
-		t.Fatalf("expected bor namespace, got %v", namespaces)
 	}
 }
 

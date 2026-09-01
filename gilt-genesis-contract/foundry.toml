@@ -1,4 +1,5 @@
 [profile.default]
+chain_id = 56
 src = 'contracts'
 test = 'test'
 script = 'foundry-script'

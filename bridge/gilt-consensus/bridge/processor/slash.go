@@ -177,7 +177,7 @@ func (sp *SlashProcessor) sendSlashRelayToRoot(eventBytes string, _ int64) error
 	}
 
 	evidenceHash := common.HexToHash(evidenceRef)
-	data, err := helper.PackSlashRelayData(validatorID, slashType, evidenceHash, giltChainID)
+	data, err := checkpointtypes.PackSlashRelayData(validatorID, slashType, evidenceHash, giltChainID)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (sp *SlashProcessor) sendSlashRelayToRoot(eventBytes string, _ int64) error
 		return err
 	}
 
-	stakeManagerAddress := common.HexToAddress(chainmanagerParams.ChainParams.StakeManagerAddress)
+	stakeManagerAddress := common.HexToAddress(chainmanagerParams.ChainParams.StakingInfoAddress)
 	return sp.contractCaller.SendSlashRelay(data, sigs, stakeManagerAddress)
 }
 

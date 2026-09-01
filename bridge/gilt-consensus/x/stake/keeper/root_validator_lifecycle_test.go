@@ -54,7 +54,7 @@ func (s *KeeperTestSuite) TestRootDerivedValidatorJoinRejectsReplayedNonce() {
 	require.NoError(err)
 	_, err = msgServer.ValidatorJoin(ctx, replayMsg)
 	require.Error(err)
-	require.Contains(err.Error(), "invalid validator nonce")
+	require.Contains(err.Error(), "validator id already exists")
 }
 
 func (s *KeeperTestSuite) TestRootDerivedStakeUpdateSetsExactAmount() {
@@ -63,7 +63,7 @@ func (s *KeeperTestSuite) TestRootDerivedStakeUpdateSetsExactAmount() {
 	viper.Set(helper.BridgeFlag, true)
 	helper.SetRootAnchoredStakeReadEnabled(true)
 	s.checkpointKeeper.EXPECT().GetAckCount(gomock.Any()).AnyTimes().Return(uint64(0), nil)
-	s.seedNativeValidators(4)
+	s.seedNativeValidators(10)
 
 	operator := secp256k1.GenPrivKey().PubKey().Address().String()
 	joinPubKey := secp256k1.GenPrivKey().PubKey()

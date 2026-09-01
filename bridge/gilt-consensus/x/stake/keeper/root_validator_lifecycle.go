@@ -64,11 +64,15 @@ func (k *Keeper) JoinValidatorFromRoot(ctx context.Context, msg *types.MsgValida
 		return types.Validator{}, err
 	}
 
-	pubKey := secp256k1.PubKey{Key: normalizeRootSignerPubKey(msg.SignerPubKey)}
+	pubKey := secp256k1.PubKey{Key: bytes.Clone(msg.SignerPubKey)}
 	if pubKey.Type() != types.Secp256k1Type {
 		return types.Validator{}, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "validator signer public key is invalid")
 	}
-	signer := util.FormatAddress(pubKey.Address().String())
+	signer, err := types.SignerAddressFromPubKey(msg.SignerPubKey)
+	if err != nil {
+		return types.Validator{}, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+	signer = util.FormatAddress(signer)
 	if existing, err := k.GetValidatorInfo(ctx, signer); err == nil && existing.ValId != 0 {
 		return types.Validator{}, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "validator signer %s already exists", signer)
 	}
@@ -184,11 +188,15 @@ func (k *Keeper) UpdateValidatorSignerFromRoot(ctx context.Context, msg *types.M
 		return types.Validator{}, err
 	}
 
-	pubKey := secp256k1.PubKey{Key: normalizeRootSignerPubKey(msg.NewSignerPubKey)}
+	pubKey := secp256k1.PubKey{Key: bytes.Clone(msg.NewSignerPubKey)}
 	if pubKey.Type() != types.Secp256k1Type {
 		return types.Validator{}, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, "new signer public key is invalid")
 	}
-	newSigner := util.FormatAddress(pubKey.Address().String())
+	newSigner, err := types.SignerAddressFromPubKey(msg.NewSignerPubKey)
+	if err != nil {
+		return types.Validator{}, errorsmod.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+	newSigner = util.FormatAddress(newSigner)
 	if newSigner == util.FormatAddress(validator.Signer) {
 		return types.Validator{}, errorsmod.Wrap(types.ErrNoSignerChange, "new signer is the same as old signer")
 	}
@@ -279,17 +287,4 @@ func (k *Keeper) setRootLifecycleSequence(ctx context.Context, action string, va
 
 func rootLifecycleSequence(action string, valID uint64, nonce uint64) string {
 	return fmt.Sprintf("root/%s/%020d/%020d", action, valID, nonce)
-}
-
-func normalizeRootSignerPubKey(pubKey []byte) []byte {
-	if len(pubKey) == 65 && pubKey[0] == 0x04 {
-		return pubKey[1:]
-	}
-	if len(pubKey) == 33 && (pubKey[0] == 0x02 || pubKey[0] == 0x03) {
-		return pubKey
-	}
-	if len(pubKey) == 32 {
-		return bytes.Clone(pubKey)
-	}
-	return bytes.Clone(pubKey)
 }
