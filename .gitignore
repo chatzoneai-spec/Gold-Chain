@@ -9,9 +9,6 @@
 **/node_modules/
 
 bridge/gilt-consensus/.deps/
-scan/goldscan/_build/
-scan/goldscan/deps/
-scan/goldscan-frontend/.next/
 
 .claude/
 bridge/gilt-consensus/.claude/

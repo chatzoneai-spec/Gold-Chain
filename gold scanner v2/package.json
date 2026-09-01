@@ -1,0 +1,19 @@
+{
+  "name": "gold-scan-v2",
+  "private": true,
+  "workspaces": [
+    "packages/indexer",
+    "packages/api",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "migrate:up": "node-pg-migrate up -m migrations",
+    "migrate:down": "node-pg-migrate down -m migrations"
+  },
+  "devDependencies": {
+    "node-pg-migrate": "^7.9.1",
+    "typescript": "^5.8.2"
+  }
+}
