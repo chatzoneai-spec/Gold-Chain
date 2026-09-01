@@ -43,9 +43,39 @@ export async function handleAccountModule(
       return accountTokenTx(params, ctx, "erc721");
     case "token1155tx":
       return accountTokenTx(params, ctx, "erc1155");
+    case "addresstokenbalance":
+      return addressTokenBalance(params, ctx);
     default:
       return notOk(`Unknown action: ${action}`);
   }
+}
+
+async function addressTokenBalance(params: URLSearchParams, ctx: ApiContext) {
+  const address = requireAddress(params);
+
+  const { rows } = await ctx.pool.query(
+    `SELECT tb.contract_address, tb.token_id::text AS token_id, tb.balance::text,
+            tc.type AS token_standard
+     FROM token_balances tb
+     JOIN token_contracts tc ON tc.address = tb.contract_address
+     WHERE tb.address = $1
+       AND tb.balance <> 0
+     ORDER BY tb.contract_address ASC, tb.token_id ASC`,
+    [address],
+  );
+
+  if (rows.length === 0) {
+    return empty("No token balances found");
+  }
+
+  return ok(
+    rows.map((row) => ({
+      contractAddress: row.contract_address,
+      tokenID: row.token_id ?? "0",
+      balance: row.balance,
+      tokenStandard: row.token_standard,
+    })),
+  );
 }
 
 async function accountBalance(params: URLSearchParams, ctx: ApiContext) {
@@ -167,9 +197,15 @@ async function accountTokenTx(
   standard: "erc20" | "erc721" | "erc1155",
 ) {
   const txhashParam = params.get("txhash")?.trim().toLowerCase();
-  const address = txhashParam ? null : requireAddress(params);
-
   const contractAddress = params.get("contractaddress")?.trim().toLowerCase();
+  let address: string | null = null;
+  if (txhashParam) {
+    requireHexHash(txhashParam, "txhash");
+  } else if (contractAddress && !params.get("address")) {
+    address = null;
+  } else {
+    address = requireAddress(params);
+  }
   const { start, end } = parseBlockRange(params);
   const pagination = parsePagination(params);
   const { limit, offset } = sqlLimitOffset(pagination);
@@ -189,7 +225,6 @@ async function accountTokenTx(
   }
 
   if (txhashParam) {
-    requireHexHash(txhashParam, "txhash");
     values.push(txhashParam);
     filters.push(`tt.transaction_hash = $${values.length}`);
   }
@@ -197,6 +232,8 @@ async function accountTokenTx(
   if (contractAddress) {
     values.push(contractAddress);
     filters.push(`tt.contract_address = $${values.length}`);
+  } else if (!address && !txhashParam) {
+    return notOk("Missing address, txhash, or contractaddress parameter");
   }
 
   const { rows } = await ctx.pool.query(

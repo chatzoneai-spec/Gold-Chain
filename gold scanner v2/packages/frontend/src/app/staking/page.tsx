@@ -1,10 +1,11 @@
 "use client";
 
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
-import { JsonSection } from "@/components/DataViews";
-import { fetchStaking, fetchValidators } from "@/lib/api";
+import { JsonSection, ValidatorSetTable } from "@/components/DataViews";
+import { fetchStaking, fetchValidatorSet, fetchValidators } from "@/lib/api";
 
 export default function StakingPage() {
+  const validatorSet = useAsyncData(() => fetchValidatorSet(), []);
   const staking = useAsyncData(() => fetchStaking(), []);
   const validators = useAsyncData(() => fetchValidators(), []);
 
@@ -15,29 +16,51 @@ export default function StakingPage() {
         Voting power, GILT vs GOLD stake split, commission, jailed, elected set — from API JSON.
       </p>
 
-      <ApiStateView
-        state={
-          staking.state.kind === "ready"
-            ? {
-                kind: "ready",
-                children: <JsonSection title="Staking events" value={staking.data} />,
-              }
-            : staking.state
-        }
-        onRetry={staking.retry}
-      />
+      <section className="card" data-testid="validator-set-section">
+        <h2>Validator set</h2>
+        <ApiStateView
+          state={
+            validatorSet.state.kind === "ready"
+              ? {
+                  kind: "ready",
+                  children: <ValidatorSetTable validators={validatorSet.data!} />,
+                }
+              : validatorSet.state
+          }
+          onRetry={validatorSet.retry}
+          testId="validator-set"
+        />
+      </section>
 
-      <ApiStateView
-        state={
-          validators.state.kind === "ready"
-            ? {
-                kind: "ready",
-                children: <JsonSection title="Validator events" value={validators.data} />,
-              }
-            : validators.state
-        }
-        onRetry={validators.retry}
-      />
+      <details className="card">
+        <summary>Staking events (secondary)</summary>
+        <ApiStateView
+          state={
+            staking.state.kind === "ready"
+              ? {
+                  kind: "ready",
+                  children: <JsonSection title="Staking events" value={staking.data} />,
+                }
+              : staking.state
+          }
+          onRetry={staking.retry}
+        />
+      </details>
+
+      <details className="card">
+        <summary>Validator events (secondary)</summary>
+        <ApiStateView
+          state={
+            validators.state.kind === "ready"
+              ? {
+                  kind: "ready",
+                  children: <JsonSection title="Validator events" value={validators.data} />,
+                }
+              : validators.state
+          }
+          onRetry={validators.retry}
+        />
+      </details>
     </main>
   );
 }

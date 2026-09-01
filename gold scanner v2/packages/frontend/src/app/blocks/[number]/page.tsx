@@ -2,8 +2,9 @@
 
 import { use } from "react";
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
-import { JsonSection } from "@/components/DataViews";
-import { fetchBlockByNumber } from "@/lib/api";
+import { JsonSection, TxTable } from "@/components/DataViews";
+import { FinalityBadge } from "@/components/ui";
+import { fetchBlockByNumber, fetchBlockTxList } from "@/lib/api";
 
 export default function BlockDetailPage({
   params,
@@ -11,35 +12,71 @@ export default function BlockDetailPage({
   params: Promise<{ number: string }>;
 }) {
   const { number } = use(params);
-  const { state, data, retry } = useAsyncData(
-    () => fetchBlockByNumber(number),
-    [number],
-  );
+  const block = useAsyncData(() => fetchBlockByNumber(number), [number]);
+  const txList = useAsyncData(() => fetchBlockTxList(number), [number]);
 
   return (
     <main className="page">
       <h1>Block {number}</h1>
       <ApiStateView
         state={
-          state.kind === "ready"
+          block.state.kind === "ready"
             ? {
                 kind: "ready",
                 children: (
                   <>
-                    <JsonSection title="Block" value={data} />
-                    <section className="card">
+                    <section className="card" data-testid="block-detail">
+                      <div className="grid-3">
+                        <div>
+                          <div className="section-label">Number</div>
+                          <strong>{block.data!.number}</strong>
+                        </div>
+                        <div>
+                          <div className="section-label">Hash</div>
+                          <strong>{block.data!.hash}</strong>
+                        </div>
+                        <div>
+                          <div className="section-label">Timestamp</div>
+                          <strong>{block.data!.timestamp}</strong>
+                        </div>
+                        <div>
+                          <div className="section-label">Validator</div>
+                          <strong>{block.data!.validator}</strong>
+                        </div>
+                        <div>
+                          <div className="section-label">Gas used / limit</div>
+                          <strong>
+                            {block.data!.gasUsed} / {block.data!.gasLimit}
+                          </strong>
+                        </div>
+                        <div>
+                          <div className="section-label">Finality</div>
+                          <FinalityBadge status={block.data!.finalityStatus} />
+                        </div>
+                      </div>
+                    </section>
+                    <JsonSection title="Block JSON" value={block.data} />
+                    <section className="card" data-testid="block-tx-list">
                       <h2>Transactions</h2>
-                      <p className="muted">
-                        Transaction list for this block is available via address
-                        or global search.
-                      </p>
+                      <ApiStateView
+                        state={
+                          txList.state.kind === "ready"
+                            ? {
+                                kind: "ready",
+                                children: <TxTable txs={txList.data!} />,
+                              }
+                            : txList.state
+                        }
+                        onRetry={txList.retry}
+                        testId="block-txs"
+                      />
                     </section>
                   </>
                 ),
               }
-            : state
+            : block.state
         }
-        onRetry={retry}
+        onRetry={block.retry}
       />
     </main>
   );

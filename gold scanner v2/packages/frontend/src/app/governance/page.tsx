@@ -1,11 +1,11 @@
 "use client";
 
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
-import { JsonSection } from "@/components/DataViews";
-import { fetchGovernance } from "@/lib/api";
+import { JsonBlock } from "@/components/ui";
+import { fetchGovernanceBoard } from "@/lib/api";
 
 export default function GovernancePage() {
-  const { state, data, retry } = useAsyncData(() => fetchGovernance(), []);
+  const { state, data, retry } = useAsyncData(() => fetchGovernanceBoard(), []);
 
   return (
     <main className="page">
@@ -14,10 +14,25 @@ export default function GovernancePage() {
       <ApiStateView
         state={
           state.kind === "ready"
-            ? { kind: "ready", children: <JsonSection title="Governance" value={data} /> }
+            ? {
+                kind: "ready",
+                children: (
+                  <>
+                    <section className="card" data-testid="governance-proposals">
+                      <h2>Proposals</h2>
+                      <JsonBlock value={data!.proposals} />
+                    </section>
+                    <section className="card" data-testid="governance-timelock">
+                      <h2>Timelock queue</h2>
+                      <JsonBlock value={data!.timelockQueue} />
+                    </section>
+                  </>
+                ),
+              }
             : state
         }
         onRetry={retry}
+        testId="governance-page"
       />
     </main>
   );

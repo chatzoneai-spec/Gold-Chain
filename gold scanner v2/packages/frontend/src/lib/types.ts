@@ -103,7 +103,124 @@ export type TransactionRecord = {
   cumulativeGasUsed: string;
   gasUsed: string;
   finalityStatus: FinalityStatus;
+  decodedInput?: DecodedInput;
+  fee?: string;
 };
+
+export type DecodedInput = {
+  selector: string;
+  signature: string | null;
+  args: unknown[] | null;
+};
+
+export type AddressTokenBalance = {
+  contractAddress: string;
+  tokenID: string;
+  balance: string;
+  tokenStandard: string;
+};
+
+export type TokenListEntry = {
+  contractAddress: string;
+  tokenType: string;
+  tokenName: string;
+  symbol: string;
+  divisor: string;
+};
+
+export type TokenHolder = {
+  address: string;
+  balance: string;
+  tokenId?: string;
+};
+
+export type GoldHolders = {
+  id1: TokenHolder[];
+  id2: TokenHolder[];
+};
+
+export type ValidatorSetRow = {
+  validatorAddress: string;
+  votingPower: string;
+  giltStake: string;
+  goldId1Stake: string;
+  goldId2Stake: string;
+  commissionBps: number;
+  jailed: boolean;
+  elected: boolean;
+};
+
+export type DelegationRow = {
+  delegator: string;
+  validator: string;
+  stakeAsset: string;
+  amount: string;
+};
+
+export type UnbondingRow = {
+  delegator: string;
+  validator: string | null;
+  stakeAsset: string;
+  amount: string;
+};
+
+export type DelegationsResult = {
+  delegations: DelegationRow[];
+  unbonding: UnbondingRow[];
+};
+
+export type CheckpointStatus = {
+  lastCommitted: {
+    blockNumber: number;
+    checkpointHash: string;
+    validatorSetHash: string;
+  } | null;
+  halted: boolean;
+  diverged: boolean;
+};
+
+export type GovernanceVote = {
+  voterAddress: string;
+  support: string;
+};
+
+export type GovernanceProposal = {
+  proposalId: string;
+  proposerAddress: string | null;
+  votes: GovernanceVote[];
+};
+
+export type TimelockQueueItem = {
+  proposalId: string;
+  timelockEta: string;
+};
+
+export type GovernanceBoard = {
+  proposals: GovernanceProposal[];
+  timelockQueue: TimelockQueueItem[];
+};
+
+export type LiveFeedEvent =
+  | {
+      type: "block";
+      number: string;
+      hash: string;
+      timestamp: string;
+      finalityStatus: string;
+    }
+  | {
+      type: "tx";
+      hash: string;
+      blockNumber: string;
+      from: string;
+      to: string;
+      value: string;
+      finalityStatus: string;
+    };
+
+export type VerifyResult =
+  | { verified: true; address: string }
+  | { error: string };
 
 export type TokenInfo = {
   contractAddress: string;

@@ -18,9 +18,33 @@ export async function handleTokenModule(
       return tokenInfo(params, ctx);
     case "tokenholderlist":
       return tokenHolderList(params, ctx);
+    case "tokenlist":
+      return tokenList(ctx);
     default:
       return notOk(`Unknown action: ${action}`);
   }
+}
+
+async function tokenList(ctx: ApiContext) {
+  const { rows } = await ctx.pool.query(
+    `SELECT address, type, name, symbol, decimals
+     FROM token_contracts
+     ORDER BY address ASC`,
+  );
+
+  if (rows.length === 0) {
+    return empty("No tokens found");
+  }
+
+  return ok(
+    rows.map((row) => ({
+      contractAddress: row.address,
+      tokenType: row.type,
+      tokenName: row.name ?? "",
+      symbol: row.symbol ?? "",
+      divisor: row.decimals === null ? "" : String(row.decimals),
+    })),
+  );
 }
 
 async function tokenInfo(params: URLSearchParams, ctx: ApiContext) {

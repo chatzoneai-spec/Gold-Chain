@@ -434,6 +434,16 @@ describe("wave9 api", () => {
     assert.equal(body.error, "invalid_compiler_version");
   });
 
+  it("POST /contract/verify rejects path traversal in compilerVersion", async () => {
+    const { status, body } = await postJson(port, "/contract/verify", {
+      address: ADDR_A,
+      source: VERIFY_SOURCE,
+      compilerVersion: "../8.20.0",
+    });
+    assert.equal(status, 400);
+    assert.equal(body.error, "invalid_compiler_version");
+  });
+
   it("POST /verify matches compiled bytecode and marks contract verified", async () => {
     const compiled = compileTiny();
     const verifyAddress = "0x0000000000000000000000000000000000000f99";

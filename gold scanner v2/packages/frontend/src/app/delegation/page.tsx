@@ -1,11 +1,11 @@
 "use client";
 
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
-import { JsonSection } from "@/components/DataViews";
-import { fetchDelegation } from "@/lib/api";
+import { JsonBlock } from "@/components/ui";
+import { fetchDelegations } from "@/lib/api";
 
 export default function DelegationPage() {
-  const { state, data, retry } = useAsyncData(() => fetchDelegation(), []);
+  const { state, data, retry } = useAsyncData(() => fetchDelegations(), []);
 
   return (
     <main className="page">
@@ -14,10 +14,25 @@ export default function DelegationPage() {
       <ApiStateView
         state={
           state.kind === "ready"
-            ? { kind: "ready", children: <JsonSection title="Delegation" value={data} /> }
+            ? {
+                kind: "ready",
+                children: (
+                  <>
+                    <section className="card" data-testid="delegations-section">
+                      <h2>Active delegations</h2>
+                      <JsonBlock value={data!.delegations} />
+                    </section>
+                    <section className="card" data-testid="unbonding-section">
+                      <h2>Unbonding</h2>
+                      <JsonBlock value={data!.unbonding} />
+                    </section>
+                  </>
+                ),
+              }
             : state
         }
         onRetry={retry}
+        testId="delegation-page"
       />
     </main>
   );

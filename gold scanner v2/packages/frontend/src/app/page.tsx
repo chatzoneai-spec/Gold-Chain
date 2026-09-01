@@ -2,6 +2,7 @@
 
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
 import { BlockTable, TxTable } from "@/components/DataViews";
+import { LiveFeed } from "@/components/LiveFeed";
 import { SolvencyHero } from "@/components/SolvencyHero";
 import { JsonBlock } from "@/components/ui";
 import {
@@ -9,6 +10,7 @@ import {
   fetchRecentBlocks,
   fetchRecentTransactions,
   fetchSolvency,
+  fetchTxCount,
 } from "@/lib/api";
 
 export default function HomePage() {
@@ -16,6 +18,7 @@ export default function HomePage() {
   const blocks = useAsyncData(() => fetchRecentBlocks(5), []);
   const txs = useAsyncData(() => fetchRecentTransactions(5), []);
   const stats = useAsyncData(() => fetchLatestBlock(), []);
+  const txCount = useAsyncData(() => fetchTxCount(), []);
 
   return (
     <main className="page">
@@ -28,6 +31,8 @@ export default function HomePage() {
         onRetry={solvency.retry}
         testId="home-solvency"
       />
+
+      <LiveFeed />
 
       <section className="card">
         <h2>Chain stats</h2>
@@ -51,6 +56,12 @@ export default function HomePage() {
                       <div>
                         <div className="section-label">Block time</div>
                         <strong>{stats.data!.timestamp}</strong>
+                      </div>
+                      <div>
+                        <div className="section-label">Transaction count</div>
+                        <strong data-testid="home-tx-count">
+                          {txCount.data ?? "—"}
+                        </strong>
                       </div>
                     </div>
                   ),

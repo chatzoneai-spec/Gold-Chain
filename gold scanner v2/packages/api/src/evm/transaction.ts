@@ -168,8 +168,13 @@ export async function getTransactionByHash(
     row.input as string | null,
   );
 
+  const gasUsed = String(row.gas_used ?? "0");
+  const gasPrice = String(row.gas_price ?? "0");
+  const fee = (BigInt(gasUsed) * BigInt(gasPrice)).toString();
+
   return ok({
     ...formatTransactionRow(row),
     decodedInput,
+    fee,
   });
 }

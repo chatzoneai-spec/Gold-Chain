@@ -4,11 +4,23 @@ import Link from "next/link";
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
 import { GoldIdSections } from "@/components/GoldIdSections";
 import { JsonSection } from "@/components/DataViews";
-import { fetchSolvency } from "@/lib/api";
-import { GOLD_CONTRACT } from "@/lib/types";
+import { fetchSolvency, fetchTokenHolders, fetchTokenInfo } from "@/lib/api";
+import { GOLD_CONTRACT, type GoldHolders } from "@/lib/types";
+
+function isGoldHolders(value: unknown): value is GoldHolders {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id1" in value &&
+    "id2" in value
+  );
+}
 
 export default function GoldPage() {
-  const { state, data, retry } = useAsyncData(() => fetchSolvency(), []);
+  const solvency = useAsyncData(() => fetchSolvency(), []);
+  const tokenInfo = useAsyncData(() => fetchTokenInfo(GOLD_CONTRACT), []);
+  const holders = useAsyncData(() => fetchTokenHolders(GOLD_CONTRACT), []);
+  const goldHolders = isGoldHolders(holders.data) ? holders.data : null;
 
   return (
     <main className="page">
@@ -19,21 +31,39 @@ export default function GoldPage() {
       <p className="muted">
         Balances, holders, and supply per token ID 1 and 2 — never collapsed.
       </p>
+
       <ApiStateView
         state={
-          state.kind === "ready"
+          tokenInfo.state.kind === "ready"
+            ? {
+                kind: "ready",
+                children: <JsonSection title="Token info" value={tokenInfo.data} />,
+              }
+            : tokenInfo.state
+        }
+        onRetry={tokenInfo.retry}
+        testId="gold-token-info"
+      />
+
+      <ApiStateView
+        state={
+          solvency.state.kind === "ready"
             ? {
                 kind: "ready",
                 children: (
                   <>
-                    <GoldIdSections solvency={data!} />
-                    <JsonSection title="API solvency payload" value={data} />
+                    <GoldIdSections
+                      solvency={solvency.data!}
+                      holdersId1={goldHolders?.id1}
+                      holdersId2={goldHolders?.id2}
+                    />
+                    <JsonSection title="API solvency payload" value={solvency.data} />
                   </>
                 ),
               }
-            : state
+            : solvency.state
         }
-        onRetry={retry}
+        onRetry={solvency.retry}
         testId="gold-page"
       />
     </main>

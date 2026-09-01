@@ -31,27 +31,35 @@ async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
+function handleVerifyPost(
+  pool: Pool,
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): void {
+  void (async () => {
+    try {
+      const body = await readJsonBody(req);
+      const response = await handleVerify(pool, body);
+      sendJsonResponse(res, response);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        sendJsonResponse(res, { status: 400, body: { error: "invalid_json" } });
+        return;
+      }
+      const message = error instanceof Error ? error.message : "Internal error";
+      sendJsonResponse(res, { status: 500, body: { error: message } });
+    }
+  })();
+}
+
 function handlePostRoute(
   pathname: string,
   pool: Pool,
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ): boolean {
-  if (pathname === "/verify") {
-    void (async () => {
-      try {
-        const body = await readJsonBody(req);
-        const response = await handleVerify(pool, body);
-        sendJsonResponse(res, response);
-      } catch (error) {
-        if (error instanceof SyntaxError) {
-          sendJsonResponse(res, { status: 400, body: { error: "invalid_json" } });
-          return;
-        }
-        const message = error instanceof Error ? error.message : "Internal error";
-        sendJsonResponse(res, { status: 500, body: { error: message } });
-      }
-    })();
+  if (pathname === "/verify" || pathname === "/contract/verify") {
+    handleVerifyPost(pool, req, res);
     return true;
   }
 

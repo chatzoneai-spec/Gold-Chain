@@ -2,16 +2,16 @@
 
 import { use } from "react";
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
-import { JsonSection, TxTable } from "@/components/DataViews";
+import { ContractReadWrite } from "@/components/ContractReadWrite";
+import { JsonSection, TokenHoldingsTable, TxTable } from "@/components/DataViews";
 import {
   fetchAddressBalance,
   fetchAddressInternalTxList,
-  fetchAddressTokenTx,
+  fetchAddressTokenBalances,
   fetchAddressTxList,
   fetchContractAbi,
   fetchContractSource,
 } from "@/lib/api";
-import { GOLD_CONTRACT } from "@/lib/types";
 
 export default function AddressPage({
   params,
@@ -20,17 +20,10 @@ export default function AddressPage({
 }) {
   const { address } = use(params);
   const balance = useAsyncData(() => fetchAddressBalance(address), [address]);
+  const holdings = useAsyncData(() => fetchAddressTokenBalances(address), [address]);
   const txs = useAsyncData(() => fetchAddressTxList(address), [address]);
   const internals = useAsyncData(
     () => fetchAddressInternalTxList(address),
-    [address],
-  );
-  const erc20 = useAsyncData(
-    () => fetchAddressTokenTx(address, "tokentx"),
-    [address],
-  );
-  const erc1155 = useAsyncData(
-    () => fetchAddressTokenTx(address, "token1155tx", GOLD_CONTRACT),
     [address],
   );
   const contract = useAsyncData(async () => {
@@ -63,52 +56,21 @@ export default function AddressPage({
       </section>
 
       <section className="card">
-        <h2>Token holdings — GOLD per ID</h2>
-        <div className="gold-id-section" data-testid="address-gold-id-1">
-          <h3>GOLD ID 1</h3>
-          <ApiStateView
-            state={
-              erc1155.state.kind === "ready"
-                ? {
-                    kind: "ready",
-                    children: (
-                      <pre className="json-block">
-                        {JSON.stringify(
-                          (erc1155.data ?? []).filter((row) => row.tokenID === "1"),
-                          null,
-                          2,
-                        )}
-                      </pre>
-                    ),
-                  }
-                : erc1155.state
-            }
-            onRetry={erc1155.retry}
-          />
-        </div>
-        <div className="gold-id-section" data-testid="address-gold-id-2">
-          <h3>GOLD ID 2</h3>
-          <ApiStateView
-            state={
-              erc1155.state.kind === "ready"
-                ? {
-                    kind: "ready",
-                    children: (
-                      <pre className="json-block">
-                        {JSON.stringify(
-                          (erc1155.data ?? []).filter((row) => row.tokenID === "2"),
-                          null,
-                          2,
-                        )}
-                      </pre>
-                    ),
-                  }
-                : erc1155.state
-            }
-            onRetry={erc1155.retry}
-          />
-        </div>
-        <JsonSection title="ERC-20 transfers" value={erc20.data} />
+        <h2>Token holdings</h2>
+        <ApiStateView
+          state={
+            holdings.state.kind === "ready"
+              ? {
+                  kind: "ready",
+                  children: (
+                    <TokenHoldingsTable holdings={holdings.data!} />
+                  ),
+                }
+              : holdings.state
+          }
+          onRetry={holdings.retry}
+          testId="address-holdings"
+        />
       </section>
 
       <section className="card">
@@ -134,39 +96,5 @@ export default function AddressPage({
         </section>
       ) : null}
     </main>
-  );
-}
-
-function ContractReadWrite({ address }: { address: string }) {
-  return (
-    <div>
-      <h3>Read / Write (mocked)</h3>
-      <form
-        className="form-field"
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-      >
-        <label htmlFor="read-fn">Read function</label>
-        <input id="read-fn" name="readFn" placeholder="balanceOf(address)" />
-        <div className="form-actions">
-          <button type="submit">Simulate read</button>
-        </div>
-      </form>
-      <form
-        className="form-field"
-        onSubmit={(event) => {
-          event.preventDefault();
-        }}
-      >
-        <label htmlFor="write-fn">Write function</label>
-        <input id="write-fn" name="writeFn" placeholder="transfer(address,uint256)" />
-        <div className="form-actions">
-          <button type="submit">Simulate write</button>
-        </div>
-      </form>
-      <p className="muted">API is read-only; forms are presentation-only.</p>
-      <input type="hidden" value={address} readOnly />
-    </div>
   );
 }

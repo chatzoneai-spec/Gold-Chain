@@ -5,8 +5,22 @@ import Link from "next/link";
 import { ApiStateView, useAsyncData } from "@/components/ApiStateView";
 import { GoldIdSections } from "@/components/GoldIdSections";
 import { JsonSection } from "@/components/DataViews";
-import { fetchSolvency, fetchTokenInfo } from "@/lib/api";
-import { GOLD_CONTRACT } from "@/lib/types";
+import {
+  fetchSolvency,
+  fetchTokenHolders,
+  fetchTokenInfo,
+  fetchTokenTransfers,
+} from "@/lib/api";
+import { GOLD_CONTRACT, type GoldHolders } from "@/lib/types";
+
+function isGoldHolders(value: unknown): value is GoldHolders {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id1" in value &&
+    "id2" in value
+  );
+}
 
 export default function TokenDetailPage({
   params,
@@ -15,14 +29,18 @@ export default function TokenDetailPage({
 }) {
   const { address } = use(params);
   const token = useAsyncData(() => fetchTokenInfo(address), [address]);
+  const holders = useAsyncData(() => fetchTokenHolders(address), [address]);
+  const transfers = useAsyncData(() => fetchTokenTransfers(address), [address]);
   const solvency = useAsyncData(
-    () => (address.toLowerCase() === GOLD_CONTRACT.toLowerCase()
-      ? fetchSolvency()
-      : Promise.resolve(null)),
+    () =>
+      address.toLowerCase() === GOLD_CONTRACT.toLowerCase()
+        ? fetchSolvency()
+        : Promise.resolve(null),
     [address],
   );
 
   const isGold = address.toLowerCase() === GOLD_CONTRACT.toLowerCase();
+  const goldHolders = isGoldHolders(holders.data) ? holders.data : null;
 
   return (
     <main className="page">
@@ -32,7 +50,10 @@ export default function TokenDetailPage({
       <ApiStateView
         state={
           token.state.kind === "ready"
-            ? { kind: "ready", children: <JsonSection title="Token info" value={token.data} /> }
+            ? {
+                kind: "ready",
+                children: <JsonSection title="Token info" value={token.data} />,
+              }
             : token.state
         }
         onRetry={token.retry}
@@ -49,7 +70,13 @@ export default function TokenDetailPage({
               solvency.state.kind === "ready" && solvency.data
                 ? {
                     kind: "ready",
-                    children: <GoldIdSections solvency={solvency.data} />,
+                    children: (
+                      <GoldIdSections
+                        solvency={solvency.data}
+                        holdersId1={goldHolders?.id1}
+                        holdersId2={goldHolders?.id2}
+                      />
+                    ),
                   }
                 : solvency.state
             }
@@ -60,7 +87,35 @@ export default function TokenDetailPage({
             <Link href="/gold">Full GOLD page</Link>
           </p>
         </section>
-      ) : null}
+      ) : (
+        <ApiStateView
+          state={
+            holders.state.kind === "ready"
+              ? {
+                  kind: "ready",
+                  children: <JsonSection title="Holders" value={holders.data} />,
+                }
+              : holders.state
+          }
+          onRetry={holders.retry}
+          testId="token-holders"
+        />
+      )}
+
+      <ApiStateView
+        state={
+          transfers.state.kind === "ready"
+            ? {
+                kind: "ready",
+                children: (
+                  <JsonSection title="Token transfers" value={transfers.data} />
+                ),
+              }
+            : transfers.state
+        }
+        onRetry={transfers.retry}
+        testId="token-transfers"
+      />
     </main>
   );
 }

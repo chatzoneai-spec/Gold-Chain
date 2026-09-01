@@ -1,13 +1,22 @@
 import type {
+  AddressTokenBalance,
   BlockRecord,
   BridgeActivity,
+  CheckpointStatus,
+  DelegationsResult,
   EtherscanResponse,
+  GovernanceBoard,
+  GoldHolders,
   MigrationStatus,
   Paginated,
   RedemptionReceipt,
   SolvencyResult,
+  TokenHolder,
   TokenInfo,
+  TokenListEntry,
   TransactionRecord,
+  ValidatorSetRow,
+  VerifyResult,
 } from "./types.js";
 
 const EVM_BASE = process.env.NEXT_PUBLIC_EVM_API_BASE ?? "/api";
@@ -23,8 +32,8 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store" });
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { cache: "no-store", ...init });
   if (!response.ok) {
     throw new ApiError(`HTTP ${response.status}`, response.status);
   }
@@ -77,6 +86,143 @@ export async function fetchRedemptionReceipt(
 ): Promise<RedemptionReceipt> {
   return goldGet<RedemptionReceipt>("/gold/redemption-receipts", {
     receiptCorrelationId,
+  });
+}
+
+export async function fetchValidatorSet(): Promise<ValidatorSetRow[]> {
+  return goldGet<ValidatorSetRow[]>("/gold/validator-set");
+}
+
+export async function fetchDelegations(): Promise<DelegationsResult> {
+  return goldGet<DelegationsResult>("/gold/delegations");
+}
+
+export async function fetchCheckpointStatus(): Promise<CheckpointStatus> {
+  return goldGet<CheckpointStatus>("/gold/checkpoint-status");
+}
+
+export async function fetchGovernanceBoard(): Promise<GovernanceBoard> {
+  return goldGet<GovernanceBoard>("/gold/governance-board");
+}
+
+export async function fetchTxCount(): Promise<string> {
+  return unwrap(
+    await evmGet<string>({
+      module: "stats",
+      action: "txcount",
+    }),
+  );
+}
+
+export async function fetchBlockTxList(blockno: string): Promise<TransactionRecord[]> {
+  return unwrap(
+    await evmGet<TransactionRecord[]>({
+      module: "block",
+      action: "getblocktxlist",
+      blockno,
+    }),
+  );
+}
+
+export async function fetchAddressTokenBalances(
+  address: string,
+): Promise<AddressTokenBalance[]> {
+  return unwrap(
+    await evmGet<AddressTokenBalance[]>({
+      module: "account",
+      action: "addresstokenbalance",
+      address,
+    }),
+  );
+}
+
+export async function fetchTokenList(): Promise<TokenListEntry[]> {
+  return unwrap(
+    await evmGet<TokenListEntry[]>({
+      module: "token",
+      action: "tokenlist",
+    }),
+  );
+}
+
+export async function fetchTokenHolders(
+  contractaddress: string,
+  tokenid?: string,
+): Promise<TokenHolder[] | GoldHolders> {
+  const params: Record<string, string> = {
+    module: "token",
+    action: "tokenholderlist",
+    contractaddress,
+  };
+  if (tokenid) {
+    params.tokenid = tokenid;
+  }
+  return unwrap(await evmGet<TokenHolder[] | GoldHolders>(params));
+}
+
+export async function fetchTokenTransfers(contractaddress: string, offset = 20) {
+  return unwrap(
+    await evmGet<Record<string, string>[]>({
+      module: "account",
+      action: "tokentx",
+      contractaddress,
+      offset: String(offset),
+    }),
+  );
+}
+
+export async function fetchTxTokenTransfers(txhash: string) {
+  return unwrap(
+    await evmGet<Record<string, string>[]>({
+      module: "account",
+      action: "tokentx",
+      txhash,
+    }),
+  );
+}
+
+export async function postVerify(body: {
+  address: string;
+  source: string;
+  compilerVersion: string;
+  optimizationEnabled?: boolean;
+  optimizationRuns?: number;
+}): Promise<VerifyResult> {
+  const response = await fetch("/contract/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json()) as VerifyResult;
+  if (!response.ok) {
+    throw new ApiError(
+      "error" in data ? String(data.error) : `HTTP ${response.status}`,
+      response.status,
+    );
+  }
+  return data;
+}
+
+export async function postContractCall(body: {
+  address: string;
+  data: string;
+}): Promise<{ result: string }> {
+  return fetchJson<{ result: string }>("/contract/call", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function postContractEncode(body: {
+  address: string;
+  signature: string;
+  args?: unknown[];
+}): Promise<{ to: string; data: string }> {
+  return fetchJson<{ to: string; data: string }>("/contract/encode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
 
