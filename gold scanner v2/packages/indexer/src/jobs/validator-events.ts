@@ -1,11 +1,12 @@
 import type { IndexerWriter } from "../writer.js";
 import type { RpcLog } from "../rpc/types.js";
 import { abiDecodeStatic } from "../abi.js";
-import { GOLD_VALIDATOR_EVENT_TOPIC } from "../gold-topics.js";
+import {
+  GOLD_VALIDATOR_EVENT_TOPIC,
+  validatorEventTypeFromCode,
+} from "../gold-topics.js";
 import { hexToNumber, topicToAddress } from "../util.js";
 import type { FinalityStatus } from "../finality.js";
-
-const VALIDATOR_EVENT_TYPES = ["created", "slashed"] as const;
 
 export async function processValidatorEvents(
   writer: IndexerWriter,
@@ -17,8 +18,9 @@ export async function processValidatorEvents(
       continue;
     }
 
-    const [eventTypeCode, amount] = abiDecodeStatic(log.data, 2);
-    const eventType = VALIDATOR_EVENT_TYPES[Number(eventTypeCode)] ?? "unknown";
+    const [eventTypeCode, amount, commissionBps, jailedWord, electedWord] =
+      abiDecodeStatic(log.data, 5);
+    const eventType = validatorEventTypeFromCode(Number(eventTypeCode));
 
     await writer.insertValidatorEvent({
       blockNumber: hexToNumber(log.blockNumber),
@@ -26,6 +28,9 @@ export async function processValidatorEvents(
       eventType,
       validatorAddress: topicToAddress(log.topics[1]!),
       amount: amount === 0n ? null : amount.toString(),
+      commissionBps: Number(commissionBps),
+      jailed: jailedWord !== 0n,
+      elected: electedWord !== 0n,
       finalityStatus,
     });
   }

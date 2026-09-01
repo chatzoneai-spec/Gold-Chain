@@ -97,6 +97,8 @@ export type StakingEventRow = {
   eventType: string;
   stakerAddress: string;
   amount: string;
+  stakeAsset: "gilt" | "gold_id_1" | "gold_id_2";
+  validatorAddress: string | null;
   finalityStatus: FinalityStatus;
 };
 
@@ -106,6 +108,9 @@ export type ValidatorEventRow = {
   eventType: string;
   validatorAddress: string;
   amount: string | null;
+  commissionBps: number;
+  jailed: boolean;
+  elected: boolean;
   finalityStatus: FinalityStatus;
 };
 
@@ -114,7 +119,10 @@ export type GovernanceEventRow = {
   transactionHash: string;
   eventType: string;
   proposerAddress: string | null;
+  voterAddress: string | null;
   proposalId: string | null;
+  support: "for" | "against" | "abstain" | null;
+  timelockEta: Date | null;
   finalityStatus: FinalityStatus;
 };
 
@@ -122,5 +130,6 @@ export type CheckpointRow = {
   blockNumber: number;
   checkpointHash: string;
   validatorSetHash: string;
+  chainStatus: "committed" | "diverged" | "halted";
   finalityStatus: FinalityStatus;
 };

@@ -8,7 +8,8 @@ export function abiDecodeStatic(data: string, wordCount: number): bigint[] {
   const words: bigint[] = [];
   for (let index = 0; index < wordCount; index += 1) {
     const start = index * 64;
-    words.push(BigInt(`0x${hex.slice(start, start + 64)}`));
+    const slice = hex.slice(start, start + 64);
+    words.push(slice.length === 0 ? 0n : BigInt(`0x${slice || "0"}`));
   }
   return words;
 }

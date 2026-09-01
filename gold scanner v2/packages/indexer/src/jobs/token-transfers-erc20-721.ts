@@ -11,6 +11,8 @@ export async function processTokenTransfersErc20Erc721(
   logs: RpcLog[],
   finalityStatus: FinalityStatus,
 ): Promise<void> {
+  const contracts = new Set<string>();
+
   for (const log of logs) {
     if (log.topics[0]?.toLowerCase() !== TRANSFER_TOPIC) {
       continue;
@@ -36,6 +38,7 @@ export async function processTokenTransfersErc20Erc721(
         logIndex,
         finalityStatus,
       });
+      contracts.add(log.address);
       continue;
     }
 
@@ -56,6 +59,11 @@ export async function processTokenTransfersErc20Erc721(
         logIndex,
         finalityStatus,
       });
+      contracts.add(log.address);
     }
+  }
+
+  for (const contractAddress of contracts) {
+    await writer.refreshTokenBalancesForContract(contractAddress);
   }
 }

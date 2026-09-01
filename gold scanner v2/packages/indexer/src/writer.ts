@@ -55,9 +55,16 @@ export class IndexerWriter {
   }
 
   async clearDerivedRowsForBlock(blockNumber: number): Promise<void> {
+    const { rows } = await this.client.query<{ contract_address: string }>(
+      `SELECT DISTINCT contract_address FROM token_transfers WHERE block_number = $1`,
+      [blockNumber],
+    );
     await this.client.query(`DELETE FROM token_transfers WHERE block_number = $1`, [
       blockNumber,
     ]);
+    for (const row of rows) {
+      await gold.refreshTokenBalancesForContract(this.client, row.contract_address);
+    }
     await gold.clearGoldDerivedRowsForBlock(this.client, blockNumber);
     await evm.clearEvmDerivedRowsForBlock(this.client, blockNumber);
   }

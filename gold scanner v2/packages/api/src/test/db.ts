@@ -12,7 +12,7 @@ export const DATABASE_URL =
   process.env.DATABASE_URL ??
   "postgres://ubuntu@/goldscan_v2_test?host=/var/run/postgresql";
 
-export const MIGRATION_COUNT = 5;
+export const MIGRATION_COUNT = 6;
 
 export function migrate(
   direction: "up" | "down",

@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import { createIndexerState, indexToHead } from "./indexer.js";
-import { refreshTokenBalancesForContract } from "./writer-gold.js";
 import { FixtureRpcClient } from "./rpc/fixture-client.js";
 import { migrate, resetDatabase, DATABASE_URL } from "./test/db.js";
 
@@ -229,8 +228,6 @@ describe("indexer invariants", () => {
       await indexToHead(rpc, client, state);
       rpc.advanceStage();
       await indexToHead(rpc, client, state);
-
-      await refreshTokenBalancesForContract(client, ERC721);
 
       const { rows: orphanedRecipient } = await client.query(
         `SELECT balance

@@ -95,6 +95,98 @@ export function goldTokenIdForRoute(routeAsset: RouteAsset): string {
   return routeAsset === "paxg" ? "1" : "2";
 }
 
+export type StakeAsset = "gilt" | "gold_id_1" | "gold_id_2";
+export type ChainStatus = "committed" | "diverged" | "halted";
+export type GovernanceSupport = "for" | "against" | "abstain";
+
+const STAKING_EVENT_TYPES = ["stake", "unstake", "unbond"] as const;
+const STAKE_ASSET_CODES: Record<number, StakeAsset> = {
+  0: "gilt",
+  1: "gold_id_1",
+  2: "gold_id_2",
+};
+
+const VALIDATOR_EVENT_TYPES = [
+  "created",
+  "slashed",
+  "jailed",
+  "unjailed",
+  "elected",
+  "unelected",
+] as const;
+
+const GOVERNANCE_EVENT_TYPES = [
+  "proposal_created",
+  "vote",
+  "queued",
+  "executed",
+] as const;
+
+const GOVERNANCE_SUPPORT_CODES: Record<number, GovernanceSupport> = {
+  1: "for",
+  2: "against",
+  3: "abstain",
+};
+
+const CHAIN_STATUS_CODES: Record<number, ChainStatus> = {
+  0: "committed",
+  1: "diverged",
+  2: "halted",
+};
+
+export function stakingEventTypeFromCode(code: number): string {
+  const eventType = STAKING_EVENT_TYPES[code];
+  if (!eventType) {
+    throw new Error(`Unknown staking event type code: ${code}`);
+  }
+  return eventType;
+}
+
+export function stakeAssetFromCode(code: number): StakeAsset {
+  const asset = STAKE_ASSET_CODES[code];
+  if (!asset) {
+    throw new Error(`Unknown stake asset code: ${code}`);
+  }
+  return asset;
+}
+
+export function validatorEventTypeFromCode(code: number): string {
+  const eventType = VALIDATOR_EVENT_TYPES[code];
+  if (!eventType) {
+    throw new Error(`Unknown validator event type code: ${code}`);
+  }
+  return eventType;
+}
+
+export function governanceEventTypeFromCode(code: number): string {
+  const eventType = GOVERNANCE_EVENT_TYPES[code];
+  if (!eventType) {
+    throw new Error(`Unknown governance event type code: ${code}`);
+  }
+  return eventType;
+}
+
+export function governanceSupportFromCode(
+  code: bigint | number,
+): GovernanceSupport | null {
+  if (code === 0n || code === 0) {
+    return null;
+  }
+  const support = GOVERNANCE_SUPPORT_CODES[Number(code)];
+  if (!support) {
+    throw new Error(`Unknown governance support code: ${code}`);
+  }
+  return support;
+}
+
+export function chainStatusFromCode(code: number): ChainStatus {
+  const status = CHAIN_STATUS_CODES[code];
+  if (!status) {
+    throw new Error(`Unknown checkpoint chain status code: ${code}`);
+  }
+  return status;
+}
+
 export function isAmountExactForRoute(
   routeAsset: RouteAsset,
   rootAmount: bigint,

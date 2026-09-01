@@ -1,11 +1,13 @@
 import type { IndexerWriter } from "../writer.js";
 import type { RpcLog } from "../rpc/types.js";
 import { abiDecodeStatic } from "../abi.js";
-import { GOLD_STAKING_EVENT_TOPIC } from "../gold-topics.js";
+import {
+  GOLD_STAKING_EVENT_TOPIC,
+  stakeAssetFromCode,
+  stakingEventTypeFromCode,
+} from "../gold-topics.js";
 import { hexToNumber, topicToAddress } from "../util.js";
 import type { FinalityStatus } from "../finality.js";
-
-const STAKING_EVENT_TYPES = ["stake", "unstake"] as const;
 
 export async function processStakingEvents(
   writer: IndexerWriter,
@@ -17,8 +19,12 @@ export async function processStakingEvents(
       continue;
     }
 
-    const [eventTypeCode, amount] = abiDecodeStatic(log.data, 2);
-    const eventType = STAKING_EVENT_TYPES[Number(eventTypeCode)] ?? "unknown";
+    const [eventTypeCode, amount, assetCode] = abiDecodeStatic(log.data, 3);
+    const eventType = stakingEventTypeFromCode(Number(eventTypeCode));
+    const stakeAsset = stakeAssetFromCode(Number(assetCode));
+    const validatorAddress = log.topics[2]
+      ? topicToAddress(log.topics[2])
+      : null;
 
     await writer.insertStakingEvent({
       blockNumber: hexToNumber(log.blockNumber),
@@ -26,6 +32,8 @@ export async function processStakingEvents(
       eventType,
       stakerAddress: topicToAddress(log.topics[1]!),
       amount: amount.toString(),
+      stakeAsset,
+      validatorAddress,
       finalityStatus,
     });
   }

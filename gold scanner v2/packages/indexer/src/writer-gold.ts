@@ -101,16 +101,22 @@ export async function insertStakingEvent(
   row: StakingEventRow,
 ): Promise<void> {
   await ensureAddress(client, row.stakerAddress);
+  if (row.validatorAddress) {
+    await ensureAddress(client, row.validatorAddress);
+  }
   await client.query(
     `INSERT INTO staking_events (
-       block_number, transaction_hash, event_type, staker_address, amount, finality_status
-     ) VALUES ($1, $2, $3, $4, $5, $6)`,
+       block_number, transaction_hash, event_type, staker_address, amount,
+       stake_asset, validator_address, finality_status
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       row.blockNumber,
       row.transactionHash,
       row.eventType,
       row.stakerAddress,
       row.amount,
+      row.stakeAsset,
+      row.validatorAddress,
       row.finalityStatus,
     ],
   );
@@ -123,14 +129,18 @@ export async function insertValidatorEvent(
   await ensureAddress(client, row.validatorAddress);
   await client.query(
     `INSERT INTO validator_events (
-       block_number, transaction_hash, event_type, validator_address, amount, finality_status
-     ) VALUES ($1, $2, $3, $4, $5, $6)`,
+       block_number, transaction_hash, event_type, validator_address, amount,
+       commission_bps, jailed, elected, finality_status
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       row.blockNumber,
       row.transactionHash,
       row.eventType,
       row.validatorAddress,
       row.amount,
+      row.commissionBps,
+      row.jailed,
+      row.elected,
       row.finalityStatus,
     ],
   );
@@ -143,16 +153,23 @@ export async function insertGovernanceEvent(
   if (row.proposerAddress) {
     await ensureAddress(client, row.proposerAddress);
   }
+  if (row.voterAddress) {
+    await ensureAddress(client, row.voterAddress);
+  }
   await client.query(
     `INSERT INTO governance_events (
-       block_number, transaction_hash, event_type, proposer_address, proposal_id, finality_status
-     ) VALUES ($1, $2, $3, $4, $5, $6)`,
+       block_number, transaction_hash, event_type, proposer_address, voter_address,
+       proposal_id, support, timelock_eta, finality_status
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       row.blockNumber,
       row.transactionHash,
       row.eventType,
       row.proposerAddress,
+      row.voterAddress,
       row.proposalId,
+      row.support,
+      row.timelockEta,
       row.finalityStatus,
     ],
   );
@@ -164,12 +181,13 @@ export async function insertCheckpoint(
 ): Promise<void> {
   await client.query(
     `INSERT INTO checkpoints (
-       block_number, checkpoint_hash, validator_set_hash, finality_status
-     ) VALUES ($1, $2, $3, $4)`,
+       block_number, checkpoint_hash, validator_set_hash, chain_status, finality_status
+     ) VALUES ($1, $2, $3, $4, $5)`,
     [
       row.blockNumber,
       row.checkpointHash,
       row.validatorSetHash,
+      row.chainStatus,
       row.finalityStatus,
     ],
   );
@@ -184,13 +202,15 @@ export async function refreshTokenBalancesForContract(
   ]);
   await client.query(
     `WITH deltas AS (
-       SELECT to_address AS address, contract_address, token_id, amount::numeric AS delta
+       SELECT to_address AS address, contract_address, COALESCE(token_id, 0) AS token_id,
+              amount::numeric AS delta
        FROM token_transfers
        WHERE contract_address = $1
          AND finality_status <> 'reverted'
          AND to_address <> $2
        UNION ALL
-       SELECT from_address AS address, contract_address, token_id, (-amount::numeric) AS delta
+       SELECT from_address AS address, contract_address, COALESCE(token_id, 0) AS token_id,
+              (-amount::numeric) AS delta
        FROM token_transfers
        WHERE contract_address = $1
          AND finality_status <> 'reverted'
