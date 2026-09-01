@@ -75,6 +75,40 @@ contract Wave6NativeStakeRetiredTest is Deployer {
         assertGt(votingPowers[0], 0, "flipped validator must produce");
     }
 
+    function testCreateValidatorRevertsWhenRootAnchoredEnabledFirst() public {
+        _enableRootAnchoredMode();
+
+        address operatorAddress = _getNextUserAddress();
+        StakeHub.Commission memory commission = StakeHub.Commission({ rate: 10, maxRate: 100, maxChangeRate: 5 });
+        StakeHub.Description memory description = StakeHub.Description({
+            moniker: string.concat("T", vm.toString(uint24(uint160(operatorAddress)))),
+            identity: vm.toString(operatorAddress),
+            website: vm.toString(operatorAddress),
+            details: vm.toString(operatorAddress)
+        });
+        bytes memory voteAddress = bytes.concat(
+            hex"00000000000000000000000000000000000000000000000000000000", abi.encodePacked(operatorAddress)
+        );
+        bytes memory blsProof = new bytes(96);
+        address consensusAddress = address(uint160(uint256(keccak256(voteAddress))));
+        uint256 toLock = stakeHub.LOCK_AMOUNT();
+
+        vm.prank(operatorAddress);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("NativeGiltWritesRetired()"))));
+        stakeHub.createValidator{ value: 2000 ether + toLock }(
+            consensusAddress, voteAddress, blsProof, commission, description
+        );
+    }
+
+    function testDelegateRevertsAfterRootAnchoredEnabled() public {
+        (address operator,,,) = _createValidator(2000 ether);
+        _enableRootAnchoredMode();
+
+        vm.prank(operator);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("NativeGiltWritesRetired()"))));
+        stakeHub.delegate{ value: 100 ether }(operator, false);
+    }
+
     function testFrozenUnflippedValidatorHasZeroElectionPowerBeforeRootAnchored() public {
         (address operator,, address credit,) = _createValidator(2000 ether);
         assertFalse(stakeHub.isGiltCutoverFlipped(operator));

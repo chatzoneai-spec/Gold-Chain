@@ -444,6 +444,12 @@ abstract contract StakeHubCommon is StakeHubStorage {
         }
     }
 
+    function _requireNativeGiltWritesRetired() internal view {
+        if (rootAnchoredGiltStakingEnabled) {
+            revert NativeGiltWritesRetired();
+        }
+    }
+
     function _requireGiltStakeUnfrozen(
         address operatorAddress
     ) internal view {

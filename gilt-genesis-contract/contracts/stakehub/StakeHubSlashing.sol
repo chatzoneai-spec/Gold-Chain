@@ -188,6 +188,11 @@ contract StakeHubSlashing is StakeHubCommon {
             return 0;
         }
 
+        if (rootAnchoredGiltStakingEnabled) {
+            _jailValidator(valInfo, jailUntil);
+            return 0;
+        }
+
         giltSlashAmount = _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, slashAmount, slashType);
         _jailValidator(valInfo, jailUntil);
         return giltSlashAmount;

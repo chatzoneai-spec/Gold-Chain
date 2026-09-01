@@ -30,6 +30,27 @@ func (s *KeeperTestSuite) TestWave6NativeApproveValidatorCannotWritePower() {
 	require.Equal(beforePower, after.VotingPower)
 }
 
+func (s *KeeperTestSuite) TestWave6KeeperApproveValidatorCannotWritePower() {
+	ctx, keeper, require := s.ctx, s.stakeKeeper, s.Require()
+	validators := s.seedNativeValidators(4)
+	operator := secp256k1.GenPrivKey().PubKey().Address().String()
+	joinPubKey := secp256k1.GenPrivKey().PubKey()
+
+	before, err := keeper.GetValidatorFromValID(ctx, validators[0].ValId)
+	require.NoError(err)
+	beforePower := before.VotingPower
+
+	approveMsg, err := types.NewMsgApproveValidator(validators[0].OperatorAddress(), 5, operator, 1, oneGilt, joinPubKey, 1)
+	require.NoError(err)
+	err = keeper.ApproveValidator(ctx, approveMsg)
+	require.Error(err)
+	require.Contains(err.Error(), "native validator GILT stake writes are retired")
+
+	after, err := keeper.GetValidatorFromValID(ctx, validators[0].ValId)
+	require.NoError(err)
+	require.Equal(beforePower, after.VotingPower)
+}
+
 func (s *KeeperTestSuite) TestWave6NativeJoinCannotIncreaseVotingPower() {
 	ctx, msgServer, keeper, require := s.ctx, s.msgServer, s.stakeKeeper, s.Require()
 	helper.SetRootAnchoredStakeReadEnabled(false)
@@ -47,6 +68,35 @@ func (s *KeeperTestSuite) TestWave6NativeJoinCannotIncreaseVotingPower() {
 	require.NoError(err)
 
 	_, err = msgServer.ValidatorJoin(ctx, joinMsg)
+	require.Error(err)
+	require.Contains(err.Error(), "native validator GILT stake writes are retired")
+
+	_, err = keeper.GetValidatorFromValID(ctx, 99)
+	require.Error(err)
+
+	afterTotal := int64(0)
+	for _, validator := range validators {
+		updated, getErr := keeper.GetValidatorFromValID(ctx, validator.ValId)
+		require.NoError(getErr)
+		afterTotal += updated.VotingPower
+	}
+	require.Equal(beforeTotal, afterTotal)
+}
+
+func (s *KeeperTestSuite) TestWave6KeeperJoinValidatorCannotWritePower() {
+	ctx, keeper, require := s.ctx, s.stakeKeeper, s.Require()
+	validators := s.seedNativeValidators(4)
+	beforeTotal := int64(0)
+	for _, validator := range validators {
+		beforeTotal += validator.VotingPower
+	}
+
+	operator := secp256k1.GenPrivKey().PubKey().Address().String()
+	joinPubKey := secp256k1.GenPrivKey().PubKey()
+	joinMsg, err := types.NewMsgValidatorJoin(operator, 99, 1, oneGilt, joinPubKey, 1)
+	require.NoError(err)
+
+	_, err = keeper.JoinValidator(ctx, joinMsg)
 	require.Error(err)
 	require.Contains(err.Error(), "native validator GILT stake writes are retired")
 
