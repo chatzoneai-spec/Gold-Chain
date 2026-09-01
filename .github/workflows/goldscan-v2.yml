@@ -1,0 +1,45 @@
+name: GoldScan v2
+
+on:
+  push:
+    paths:
+      - "gold scanner v2/**"
+      - ".github/workflows/goldscan-v2.yml"
+  pull_request:
+    paths:
+      - "gold scanner v2/**"
+      - ".github/workflows/goldscan-v2.yml"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "gold scanner v2"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: goldscan_v2_test
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres@localhost:5432/goldscan_v2_test
+      GOLDSCAN_CONFIRMATION_DEPTH: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: "gold scanner v2/package-lock.json"
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
