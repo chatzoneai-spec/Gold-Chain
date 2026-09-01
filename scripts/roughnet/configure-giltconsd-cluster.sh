@@ -7,9 +7,13 @@ TESTNET_GEN="$ROUGHNET/testnet-gen"
 GILTCONSD="$ROOT/bridge/gilt-consensus/build/giltconsd"
 GILTCONS_HOME="$ROUGHNET/giltconsd"
 
-PEERS="118a6b0a3599edfad0d33f69bb343d73dcf06ffb@127.0.0.1:26656,7075e60af7b595ea87ab394853acf3db7e59923b@127.0.0.1:26666,a368c94782bfc5076c5252610c29636d9eca1bba@127.0.0.1:26676,da2a1779258fa2f0e58db4fa66a76ad5dd2b0b88@127.0.0.1:26686"
+FORCE_RECREATE=0
+if [[ "${1:-}" == "--force-recreate" ]]; then
+  FORCE_RECREATE=1
+fi
 
-if [[ ! -d "$TESTNET_GEN/node0/giltconsd" ]]; then
+if [[ "$FORCE_RECREATE" -eq 1 ]] || [[ ! -d "$TESTNET_GEN/node0/giltconsd" ]]; then
+  rm -rf "$TESTNET_GEN"
   "$GILTCONSD" create-testnet \
     --v 4 \
     --n 0 \
@@ -22,16 +26,29 @@ fi
 python3 - <<'PY'
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 root = Path('/workspace/.tmp/roughnet/testnet-gen')
-peers = '118a6b0a3599edfad0d33f69bb343d73dcf06ffb@127.0.0.1:26656,7075e60af7b595ea87ab394853acf3db7e59923b@127.0.0.1:26666,a368c94782bfc5076c5252610c29636d9eca1bba@127.0.0.1:26676,da2a1779258fa2f0e58db4fa66a76ad5dd2b0b88@127.0.0.1:26686'
+giltconsd = Path('/workspace/bridge/gilt-consensus/build/giltconsd')
 nodes = [
     (0, 26656, 26657, 1317),
     (1, 26666, 26667, 1327),
     (2, 26676, 26677, 1337),
     (3, 26686, 26687, 1347),
 ]
+
+node_ids = []
+for idx, p2p_port, _rpc_port, _api_port in nodes:
+    home = root / f'node{idx}' / 'giltconsd'
+    node_id = subprocess.check_output(
+        [str(giltconsd), 'tendermint', 'show-node-id', '--home', str(home)],
+        text=True,
+    ).strip()
+    node_ids.append((node_id, p2p_port))
+
+peers = ','.join(f'{node_id}@127.0.0.1:{p2p_port}' for node_id, p2p_port in node_ids)
 
 for idx, p2p_port, rpc_port, api_port in nodes:
     home = root / f'node{idx}' / 'giltconsd'
@@ -67,7 +84,6 @@ for idx, p2p_port, rpc_port, api_port in nodes:
 
     data = home / 'data'
     if data.exists():
-        import shutil
         for child in data.iterdir():
             if child.is_file():
                 child.unlink()
@@ -80,10 +96,9 @@ for idx, p2p_port, rpc_port, api_port in nodes:
     shutil.copy(template, data / 'priv_validator_state.json')
 
 primary = Path('/workspace/.tmp/roughnet/giltconsd')
-import shutil
 if primary.exists():
     shutil.rmtree(primary)
 shutil.copytree(root / 'node0' / 'giltconsd', primary)
-PY
 
-echo "configured 4-node giltconsd cluster"
+print(f'configured 4-node giltconsd cluster peers={peers}')
+PY
