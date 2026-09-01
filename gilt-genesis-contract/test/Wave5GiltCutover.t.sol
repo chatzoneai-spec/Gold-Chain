@@ -101,7 +101,7 @@ contract Wave5GiltCutoverTest is Deployer {
         assertNotEq(votingPowers[0], nativeStake * stakeHub.stakeWeightA() / 10_000, "native stake must not count after flip");
 
         vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("GiltCutoverAlreadyFlipped()"))));
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("NativeGiltWritesRetired()"))));
         stakeHub.delegate{ value: 100 ether }(operator, false);
     }
 

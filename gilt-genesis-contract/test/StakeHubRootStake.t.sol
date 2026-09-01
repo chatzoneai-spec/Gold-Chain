@@ -112,7 +112,7 @@ contract StakeHubRootStakeTest is Deployer {
         (, uint256[] memory before,,) = stakeHub.getValidatorElectionInfo(0, 0);
 
         vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("GiltCutoverAlreadyFlipped()"))));
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("NativeGiltWritesRetired()"))));
         stakeHub.delegate{ value: 500 ether }(operator, false);
 
         (, uint256[] memory afterDelegate,,) = stakeHub.getValidatorElectionInfo(0, 0);
