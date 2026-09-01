@@ -293,6 +293,21 @@ describe("evm api", () => {
     assert.equal(body.status, "0");
   });
 
+  it("token tokenlist returns empty result when token_contracts has no rows", async () => {
+    await withClient(async (client) => {
+      await client.query(`TRUNCATE token_contracts CASCADE`);
+    });
+
+    const { status, body } = await apiGet(port, {
+      module: "token",
+      action: "tokenlist",
+    });
+    assert.equal(status, 200);
+    assert.equal(body.status, "1");
+    assert.equal(body.message, "No tokens found");
+    assert.deepEqual(body.result, []);
+  });
+
   it("contract getsourcecode returns contract row", async () => {
     const { body } = await apiGet(port, {
       module: "contract",
