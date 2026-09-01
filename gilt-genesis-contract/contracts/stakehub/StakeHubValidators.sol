@@ -45,6 +45,7 @@ contract StakeHubValidators is StakeHubCommon {
         Commission calldata commission,
         Description calldata description
     ) external payable onlyStakeHubDelegateCall whenNotPaused notInBlackList {
+        _requireNativeGiltWritesRetired();
         if (giltStakeFreezeEnabled) revert GiltStakeFrozen();
 
         // basic check

@@ -109,6 +109,7 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     error GiltCutoverFreezeRequired();
     error GiltCutoverDelegatorNotMigrated();
     error RootStakeAnchorDisabled();
+    error NativeGiltWritesRetired();
 
     /*----------------- storage -----------------*/
     uint8 internal _receiveFundStatus;

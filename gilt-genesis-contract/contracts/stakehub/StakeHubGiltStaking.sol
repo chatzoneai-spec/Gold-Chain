@@ -10,6 +10,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         address operatorAddress,
         bool delegateVotePower
     ) external payable onlyStakeHubDelegateCall whenNotPaused notInBlackList validatorExist(operatorAddress) {
+        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(operatorAddress);
         _requireGiltCutoverNotFlipped(operatorAddress);
 
@@ -34,6 +35,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         address operatorAddress,
         uint256 shares
     ) external onlyStakeHubDelegateCall whenNotPaused notInBlackList validatorExist(operatorAddress) {
+        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(operatorAddress);
         _requireGiltCutoverNotFlipped(operatorAddress);
 
@@ -67,6 +69,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         validatorExist(dstValidator)
         enableReceivingFund
     {
+        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(srcValidator);
         _requireGiltCutoverNotFlipped(srcValidator);
         _requireGiltStakeUnfrozen(dstValidator);
