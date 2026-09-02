@@ -1,11 +1,12 @@
 pragma solidity 0.6.6;
 
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
-import {ICheckpointManager} from "./ICheckpointManager.sol";
+import {ICheckpointManager} from "../../contracts/root/ICheckpointManager.sol";
 
 /**
-* @notice Mock Checkpoint Manager contract to simulate plasma checkpoints while testing
-*/
+ * @notice Mock Checkpoint Manager for Hardhat unit tests only.
+ * @dev Lives under test/fixtures — not part of production contract builds.
+ */
 contract MockCheckpointManager is ICheckpointManager {
     using SafeMath for uint256;
 
