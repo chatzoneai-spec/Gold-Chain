@@ -6,6 +6,10 @@ import "lib/forge-std/src/Test.sol";
 import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 import {RootChainManager} from "contracts/root/RootChainManager/RootChainManager.sol";
 import {RootChainManagerProxy} from "contracts/root/RootChainManager/RootChainManagerProxy.sol";
+import {DummyERC20} from "contracts/root/RootToken/DummyERC20.sol";
+import {DummyStateSender} from "contracts/root/StateSender/DummyStateSender.sol";
+import {ScaledERC1155Predicate} from "contracts/root/TokenPredicates/ScaledERC1155Predicate.sol";
+import {ScaledERC1155PredicateProxy} from "contracts/root/TokenPredicates/ScaledERC1155PredicateProxy.sol";
 import {Merkle} from "contracts/lib/Merkle.sol";
 
 interface IGovernance {
@@ -72,6 +76,26 @@ contract RootChainManagerCheckpointTest is Test {
     address internal validatorSetCommitment;
     TestableRootChainManager internal manager;
     address internal owner = makeAddr("owner");
+    address internal alice = makeAddr("alice");
+    address internal childGold = makeAddr("childGold");
+
+    DummyERC20 internal paxg;
+    ScaledERC1155Predicate internal goldPredicate;
+
+    uint256 internal constant GOLD_CHILD_TOKEN_ID = 1;
+    uint256 internal constant GOLD_SCALE_NUMERATOR = 1000;
+    uint256 internal constant GOLD_ROOT_AMOUNT = 2 ether;
+    uint256 internal constant GOLD_CHILD_AMOUNT = GOLD_ROOT_AMOUNT * GOLD_SCALE_NUMERATOR;
+    uint256 internal constant GOLD_WITHDRAW_BLOCK = 1;
+    uint256 internal constant GOLD_WITHDRAW_BLOCK_TIME = 424242;
+
+    event ExitedScaledERC1155(
+        address indexed exitor,
+        address indexed rootToken,
+        uint256 childTokenId,
+        uint256 childAmount,
+        uint256 rootAmount
+    );
 
     function setUp() public {
         _deployPosContracts();
@@ -183,6 +207,151 @@ contract RootChainManagerCheckpointTest is Test {
         vm.prank(governance);
         IRootChain(rootChain).updateCheckpointFinalityDelay(20);
         assertEq(IRootChain(rootChain).checkpointFinalityDelay(), 20);
+    }
+
+    function test_gold_exit_revertsBeforeCheckpointFinality_thenReleasesPaxgAfterDelay() public {
+        _wireGoldRoute();
+        _lockPaxgForAlice();
+
+        uint256 headerNumber = _submitGoldWithdrawCheckpoint();
+        bytes memory exitPayload = _buildGoldExitPayload(headerNumber);
+
+        uint256 aliceBefore = paxg.balanceOf(alice);
+        uint256 predicateBefore = paxg.balanceOf(address(goldPredicate));
+        uint256 totalSupplyBefore = paxg.totalSupply();
+
+        vm.expectRevert(bytes("RootChainManager: CHECKPOINT_NOT_FINALIZED"));
+        manager.exit(exitPayload);
+
+        vm.roll(
+            IRootChain(rootChain).headerCreatedBlock(headerNumber)
+                + IRootChain(rootChain).checkpointFinalityDelay()
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit ExitedScaledERC1155(
+            alice,
+            address(paxg),
+            GOLD_CHILD_TOKEN_ID,
+            GOLD_CHILD_AMOUNT,
+            GOLD_ROOT_AMOUNT
+        );
+        manager.exit(exitPayload);
+
+        assertEq(paxg.balanceOf(alice), aliceBefore + GOLD_ROOT_AMOUNT);
+        assertEq(paxg.balanceOf(address(goldPredicate)), predicateBefore - GOLD_ROOT_AMOUNT);
+        assertEq(paxg.totalSupply(), totalSupplyBefore);
+    }
+
+    function _wireGoldRoute() internal {
+        paxg = new DummyERC20("Dummy PAXG", "PAXG");
+
+        ScaledERC1155Predicate impl = new ScaledERC1155Predicate();
+        goldPredicate = ScaledERC1155Predicate(
+            address(new ScaledERC1155PredicateProxy(address(impl)))
+        );
+        goldPredicate.initialize(owner, GOLD_SCALE_NUMERATOR, 1);
+
+        vm.startPrank(owner);
+        manager.setStateSender(address(new DummyStateSender()));
+        manager.setChildChainManagerAddress(makeAddr("childChainManager"));
+
+        bytes32 scaledType = goldPredicate.TOKEN_TYPE();
+        manager.registerPredicate(scaledType, address(goldPredicate));
+        goldPredicate.grantRole(goldPredicate.MANAGER_ROLE(), address(manager));
+        goldPredicate.configureGoldRoutePrecision(
+            address(paxg),
+            GOLD_CHILD_TOKEN_ID,
+            18,
+            18,
+            GOLD_SCALE_NUMERATOR,
+            1,
+            1
+        );
+        manager.mapGoldToken(address(paxg), childGold, GOLD_CHILD_TOKEN_ID, scaledType);
+        vm.stopPrank();
+    }
+
+    function _lockPaxgForAlice() internal {
+        vm.prank(alice);
+        paxg.mint(GOLD_ROOT_AMOUNT);
+        vm.startPrank(alice);
+        paxg.approve(address(goldPredicate), GOLD_ROOT_AMOUNT);
+        manager.depositFor(
+            alice,
+            address(paxg),
+            abi.encode(GOLD_CHILD_TOKEN_ID, GOLD_ROOT_AMOUNT)
+        );
+        vm.stopPrank();
+
+        assertEq(paxg.balanceOf(alice), 0);
+        assertEq(paxg.balanceOf(address(goldPredicate)), GOLD_ROOT_AMOUNT);
+    }
+
+    function _submitGoldWithdrawCheckpoint() internal returns (uint256 headerNumber) {
+        headerNumber = IRootChain(rootChain).currentHeaderBlock() + 10_000;
+
+        (
+            bytes memory exitPayload,
+            bytes32 rootHash,
+            uint256 blockNumber,
+            uint256 blockTime,
+            bytes32 txRoot,
+            bytes32 receiptRoot
+        ) = _decodeGoldExitBuild(_ffiGoldExitBuild(headerNumber));
+
+        assertEq(blockNumber, GOLD_WITHDRAW_BLOCK);
+        assertEq(blockTime, GOLD_WITHDRAW_BLOCK_TIME);
+        assertEq(
+            rootHash,
+            keccak256(abi.encodePacked(blockNumber, blockTime, txRoot, receiptRoot))
+        );
+
+        headerNumber = _submitCheckpoint(GOLD_WITHDRAW_BLOCK, GOLD_WITHDRAW_BLOCK, rootHash);
+        assertEq(exitPayload.length > 0, true);
+    }
+
+    function _buildGoldExitPayload(uint256 headerNumber) internal returns (bytes memory) {
+        (bytes memory exitPayload,,,,,) = _decodeGoldExitBuild(_ffiGoldExitBuild(headerNumber));
+        return exitPayload;
+    }
+
+    function _ffiGoldExitBuild(uint256 headerNumber) internal returns (bytes memory) {
+        string[] memory inputs = new string[](4);
+        inputs[0] = "npx";
+        inputs[1] = "tsx";
+        inputs[2] = "forge/utils/buildGoldExitPayload.ts";
+        inputs[3] = vm.toString(
+            abi.encode(
+                childGold,
+                alice,
+                alice,
+                GOLD_CHILD_TOKEN_ID,
+                GOLD_CHILD_AMOUNT,
+                GOLD_WITHDRAW_BLOCK,
+                GOLD_WITHDRAW_BLOCK_TIME,
+                headerNumber
+            )
+        );
+        return vm.ffi(inputs);
+    }
+
+    function _decodeGoldExitBuild(bytes memory encoded)
+        internal
+        pure
+        returns (
+            bytes memory exitPayload,
+            bytes32 rootHash,
+            uint256 blockNumber,
+            uint256 blockTime,
+            bytes32 txRoot,
+            bytes32 receiptRoot
+        )
+    {
+        return abi.decode(
+            encoded,
+            (bytes, bytes32, uint256, uint256, bytes32, bytes32)
+        );
     }
 
     function _deployPosContracts() internal {
