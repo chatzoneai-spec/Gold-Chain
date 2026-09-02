@@ -5,9 +5,8 @@ libs = ['node_modules', 'lib']
 no-match-contract = 'StakeManagerTestable'
 optimizer = true
 optimizer_runs = 200
-via_ir = true
+via_ir = false
 cache_path = 'forge-cache'
-skip = ["contracts/staking/ValidatorSetCommitment.sol", "contracts/staking/IValidatorSetCommitment.sol"]
 verbosity = 2
 memory_limit = 40003554432
 gas_limit = "18446744073709551615"
@@ -25,26 +24,6 @@ fs_permissions = [
   { access = "read", path = "./out/" },
 ]
 auto_detect_solc = true
-
-[profile.slashrelay]
-test = "test/unitForge/staking/SlashRelay.t.sol"
-via_ir = false
-
-[profile.wave4]
-src = "contracts/staking/stakeManager/MockRootChainChainId.sol"
-test = "test/unitForge/staking/Wave4SlashRelayAttack.t.sol"
-via_ir = false
-extra_output_files = ["abi"]
-
-[profile.wave4-stakinginfo]
-src = "contracts/staking/StakingInfo.sol"
-test = "test/unitForge/staking/Wave4StakingInfoReplayAttack.t.sol"
-via_ir = false
-
-[profile.wave5]
-src = "contracts/staking/stakeManager/CutoverSharesHarness.sol"
-test = "test/unitForge/staking/Wave5CutoverShares.t.sol"
-via_ir = true
 
 [invariant]
 fail_on_revert = false

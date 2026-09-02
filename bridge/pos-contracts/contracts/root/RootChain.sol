@@ -5,6 +5,7 @@ import {SafeMath} from "../common/oz/math/SafeMath.sol";
 import {RootChainStorage} from "./RootChainStorage.sol";
 
 import {IRootChain} from "./IRootChain.sol";
+import {IValidatorSetCommitment} from "../staking/IValidatorSetCommitment.sol";
 
 contract RootChain is RootChainStorage, IRootChain {
     using SafeMath for uint256;
@@ -15,26 +16,18 @@ contract RootChain is RootChainStorage, IRootChain {
     }
 
     function submitCheckpoint(bytes calldata data, uint256[3][] calldata sigs) external {
-        (address proposer, uint256 start, uint256 end, bytes32 rootHash, bytes32 accountHash, uint256 _giltChainID) =
+        (address proposer, uint256 start, uint256 end, bytes32 rootHash,, uint256 _giltChainID) =
             abi.decode(data, (address, uint256, uint256, bytes32, bytes32, uint256));
         require(CHAINID == _giltChainID, "Invalid gilt chain id");
 
         require(_buildHeaderBlock(proposer, start, end, rootHash), "INCORRECT_HEADER_DATA");
 
-        address verifier = registry.contractMap(keccak256("validatorSetCommitment"));
-        require(verifier != address(0), "no commitment");
-        (bool success, bytes memory returnData) = verifier.call(
-            abi.encodeWithSignature(
-                "checkSignatures(uint256,bytes32,bytes32,address,uint256[3][])",
-                end.sub(start).add(1),
-                keccak256(abi.encodePacked(bytes(hex"01"), data)),
-                accountHash,
-                proposer,
-                sigs
-            )
+        address commitmentAddr = registry.contractMap(keccak256("validatorSetCommitment"));
+        require(commitmentAddr != address(0), "no commitment");
+        uint256 _reward = IValidatorSetCommitment(commitmentAddr).verifyCheckpointSignatures(
+            keccak256(abi.encodePacked(bytes(hex"01"), data)),
+            sigs
         );
-        require(success, "checkpoint verify failed");
-        uint256 _reward = abi.decode(returnData, (uint256));
 
         require(_reward != 0, "Invalid checkpoint");
         emit NewHeaderBlock(proposer, _nextHeaderBlock, _reward, start, end, rootHash);
