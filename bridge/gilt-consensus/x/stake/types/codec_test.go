@@ -30,8 +30,7 @@ func TestRegisterLegacyAminoCodec(t *testing.T) {
 		cdc := codec.NewLegacyAmino()
 		types.RegisterLegacyAminoCodec(cdc)
 
-		// Create a simple message without requiring full validator join setup
-		msg := &types.MsgValidatorExit{
+		msg := &types.MsgWithdrawValidatorStake{
 			From:  "0x1234567890123456789012345678901234567890",
 			ValId: 1,
 		}
@@ -56,13 +55,13 @@ func TestRegisterInterfaces(t *testing.T) {
 		})
 	})
 
-	t.Run("can resolve MsgValidatorJoin as sdk.Msg", func(t *testing.T) {
+	t.Run("can resolve MsgApproveValidator as sdk.Msg", func(t *testing.T) {
 		t.Parallel()
 
 		interfaceRegistry := codectypes.NewInterfaceRegistry()
 		types.RegisterInterfaces(interfaceRegistry)
 
-		msg := &types.MsgValidatorJoin{
+		msg := &types.MsgApproveValidator{
 			From:         "0x1234567890123456789012345678901234567890",
 			ValId:        1,
 			SignerPubKey: make([]byte, 65),
@@ -81,12 +80,9 @@ func TestRegisterInterfaces(t *testing.T) {
 	t.Run("registered messages implement sdk.Msg interface", func(t *testing.T) {
 		t.Parallel()
 
-		// Verify at compile time
 		var _ sdk.Msg = &types.MsgApproveValidator{}
-		var _ sdk.Msg = &types.MsgValidatorJoin{}
-		var _ sdk.Msg = &types.MsgStakeUpdate{}
-		var _ sdk.Msg = &types.MsgSignerUpdate{}
-		var _ sdk.Msg = &types.MsgValidatorExit{}
 		var _ sdk.Msg = &types.MsgWithdrawValidatorStake{}
+		var _ sdk.Msg = &types.MsgDelegateGold{}
+		var _ sdk.Msg = &types.MsgUndelegateGold{}
 	})
 }

@@ -21,8 +21,6 @@ service Msg {
   // UpdateParams defines a method for updating checkpoint module parameters.
   // Only the governance authority can execute this.
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
-  // SlashRelay packages a finalized child slash for root StakeManager relay.
-  rpc SlashRelay(MsgSlashRelay) returns (MsgSlashRelayResponse);
 }
 
 // MsgCheckpoint defines the message for proposing a new checkpoint.
@@ -115,23 +113,3 @@ message MsgUpdateParams {
 
 // MsgUpdateParamsResponse defines the response for MsgUpdateParams.
 message MsgUpdateParamsResponse {}
-
-// MsgSlashRelay defines the message for relaying a finalized slash to root StakeManager.
-message MsgSlashRelay {
-  option (cosmos.msg.v1.signer) = "proposer";
-  option (amino.name) = "giltconsensusv2/checkpoint/MsgSlashRelay";
-  option (gogoproto.equal) = true;
-  option (gogoproto.goproto_getters) = true;
-  string proposer = 1 [
-    (amino.dont_omitempty) = true,
-    (cosmos_proto.scalar) = "cosmos.AddressString"
-  ];
-  uint64 validator_id = 2 [ (amino.dont_omitempty) = true ];
-  uint32 slash_type = 3 [ (amino.dont_omitempty) = true ];
-  bytes evidence_ref = 4 [ (amino.dont_omitempty) = true ];
-  uint64 finalized_height = 5 [ (amino.dont_omitempty) = true ];
-  string gilt_chain_id = 6 [ (amino.dont_omitempty) = true ];
-}
-
-// MsgSlashRelayResponse defines the response for MsgSlashRelay.
-message MsgSlashRelayResponse {}

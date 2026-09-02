@@ -17,18 +17,6 @@ service Msg {
   rpc ApproveValidator(MsgApproveValidator)
       returns (MsgApproveValidatorResponse);
 
-  // ValidatorJoin processes a new validator joining the network.
-  rpc ValidatorJoin(MsgValidatorJoin) returns (MsgValidatorJoinResponse);
-
-  // StakeUpdate processes an update to a validator's stake amount.
-  rpc StakeUpdate(MsgStakeUpdate) returns (MsgStakeUpdateResponse);
-
-  // SignerUpdate processes an update to a validator's signer public key.
-  rpc SignerUpdate(MsgSignerUpdate) returns (MsgSignerUpdateResponse);
-
-  // ValidatorExit processes a validator exiting the network.
-  rpc ValidatorExit(MsgValidatorExit) returns (MsgValidatorExitResponse);
-
   // WithdrawValidatorStake releases self-bonded GILT after the validator's
   // unbonding period has completed.
   rpc WithdrawValidatorStake(MsgWithdrawValidatorStake)
@@ -70,102 +58,6 @@ message MsgApproveValidator {
 
 // MsgApproveValidatorResponse defines the response for MsgApproveValidator.
 message MsgApproveValidatorResponse {}
-
-// MsgValidatorJoin defines the message for a new validator joining the network.
-// This is a native Gold Chain transaction and must match a prior approval.
-message MsgValidatorJoin {
-  option (cosmos.msg.v1.signer) = "from";
-  option (amino.name) = "giltconsensusv2/stake/MsgValidatorJoin";
-  option (gogoproto.equal) = false;
-  option (gogoproto.goproto_getters) = true;
-  string from = 1 [
-    (amino.dont_omitempty) = true,
-    (cosmos_proto.scalar) = "cosmos.AddressString"
-  ];
-  uint64 val_id = 2 [ (amino.dont_omitempty) = true ]; // Validator ID
-  uint64 activation_epoch = 3
-      [ (amino.dont_omitempty) = true ]; // Epoch when validator becomes active
-  string amount = 4 [
-    (gogoproto.nullable) = false,
-    (gogoproto.customtype) = "cosmossdk.io/math.Int",
-    (amino.dont_omitempty) = true
-  ]; // Staked amount
-  bytes signer_pub_key = 5
-      [ (amino.dont_omitempty) = true ]; // Public key for block signing
-  reserved 6, 7, 8;
-  reserved "tx_hash", "log_index", "block_number";
-  uint64 nonce = 9
-      [ (amino.dont_omitempty) = true ]; // Nonce for replay protection
-}
-
-// MsgValidatorJoinResponse defines the response for MsgValidatorJoin.
-message MsgValidatorJoinResponse {}
-
-// MsgStakeUpdate defines the message for updating a validator's stake amount.
-message MsgStakeUpdate {
-  option (cosmos.msg.v1.signer) = "from";
-  option (amino.name) = "giltconsensusv2/stake/MsgStakeUpdate";
-  option (gogoproto.equal) = false;
-  option (gogoproto.goproto_getters) = true;
-  string from = 1 [
-    (amino.dont_omitempty) = true,
-    (cosmos_proto.scalar) = "cosmos.AddressString"
-  ];
-  uint64 val_id = 2 [ (amino.dont_omitempty) = true ];
-  string new_amount = 3 [
-    (gogoproto.nullable) = false,
-    (amino.dont_omitempty) = true,
-    (gogoproto.customtype) = "cosmossdk.io/math.Int"
-  ]; // New stake amount
-  reserved 4, 5, 6;
-  reserved "tx_hash", "log_index", "block_number";
-  uint64 nonce = 7 [ (amino.dont_omitempty) = true ];
-}
-
-// MsgStakeUpdateResponse defines the response for MsgStakeUpdate.
-message MsgStakeUpdateResponse {}
-
-// MsgSignerUpdate defines the message for updating a validator's signer public
-// key.
-message MsgSignerUpdate {
-  option (cosmos.msg.v1.signer) = "from";
-  option (amino.name) = "giltconsensusv2/stake/MsgSignerUpdate";
-  option (gogoproto.equal) = false;
-  option (gogoproto.goproto_getters) = true;
-  string from = 1 [
-    (amino.dont_omitempty) = true,
-    (cosmos_proto.scalar) = "cosmos.AddressString"
-  ];
-  uint64 val_id = 2 [ (amino.dont_omitempty) = true ];
-  bytes new_signer_pub_key = 3
-      [ (amino.dont_omitempty) = true ]; // New public key for block signing
-  reserved 4, 5, 6;
-  reserved "tx_hash", "log_index", "block_number";
-  uint64 nonce = 7 [ (amino.dont_omitempty) = true ];
-}
-
-// MsgSignerUpdateResponse defines the response for MsgSignerUpdate.
-message MsgSignerUpdateResponse {}
-
-// MsgValidatorExit defines the message for a validator exiting the network.
-message MsgValidatorExit {
-  option (cosmos.msg.v1.signer) = "from";
-  option (amino.name) = "giltconsensusv2/stake/MsgValidatorExit";
-  option (gogoproto.equal) = false;
-  option (gogoproto.goproto_getters) = true;
-  string from = 1 [
-    (amino.dont_omitempty) = true,
-    (cosmos_proto.scalar) = "cosmos.AddressString"
-  ];
-  uint64 val_id = 2 [ (amino.dont_omitempty) = true ];
-  reserved 3, 4, 5, 6;
-  reserved "deactivation_epoch", "tx_hash", "log_index", "block_number";
-  uint64 nonce = 7 [ (amino.dont_omitempty) = true ];
-  uint64 root_deactivation_epoch = 8 [ (amino.dont_omitempty) = true ];
-}
-
-// MsgValidatorExitResponse defines the response for MsgValidatorExit.
-message MsgValidatorExitResponse {}
 
 // MsgWithdrawValidatorStake releases self-bonded GILT after validator exit and
 // unbonding have completed.

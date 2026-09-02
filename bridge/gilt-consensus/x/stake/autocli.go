@@ -73,51 +73,6 @@ func (am AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					},
 				},
 				{
-					RpcMethod: "ValidatorJoin",
-					Use:       "validator-join [from] [valId] [activationEpoch] [amount] [signerPubKey] [nonce]",
-					Short:     "Join Gold Chain as an approved native validator",
-					PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-						{ProtoField: "from"},
-						{ProtoField: "val_id"},
-						{ProtoField: "activation_epoch"},
-						{ProtoField: "amount"},
-						{ProtoField: "signer_pub_key"},
-						{ProtoField: "nonce"},
-					},
-				},
-				{
-					RpcMethod: "StakeUpdate",
-					Use:       "stake-update [from] [valId] [amount] [nonce]",
-					Short:     "Increase native validator self-staked GILT",
-					PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-						{ProtoField: "from"},
-						{ProtoField: "val_id"},
-						{ProtoField: "new_amount"},
-						{ProtoField: "nonce"},
-					},
-				},
-				{
-					RpcMethod: "SignerUpdate",
-					Use:       "signer-update [from] [valId] [newSignerPubKey] [nonce]",
-					Short:     "Update validator signer public key",
-					PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-						{ProtoField: "from"},
-						{ProtoField: "val_id"},
-						{ProtoField: "new_signer_pub_key"},
-						{ProtoField: "nonce"},
-					},
-				},
-				{
-					RpcMethod: "ValidatorExit",
-					Use:       "validator-exit [from] [valId] [nonce]",
-					Short:     "Exit a native validator",
-					PositionalArgs: []*autocliv1.PositionalArgDescriptor{
-						{ProtoField: "from"},
-						{ProtoField: "val_id"},
-						{ProtoField: "nonce"},
-					},
-				},
-				{
 					RpcMethod: "WithdrawValidatorStake",
 					Use:       "withdraw-validator-stake [from] [valId]",
 					Short:     "Withdraw self-staked GILT after validator exit unbonding",

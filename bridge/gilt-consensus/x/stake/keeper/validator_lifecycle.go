@@ -149,26 +149,6 @@ func (k *Keeper) ApproveValidator(ctx context.Context, msg *types.MsgApproveVali
 	return k.rejectNativeStakeWrite()
 }
 
-func (k *Keeper) JoinValidator(ctx context.Context, msg *types.MsgValidatorJoin) (types.Validator, error) {
-	k.PanicIfSetupIsIncomplete()
-	return types.Validator{}, k.rejectNativeStakeWrite()
-}
-
-func (k *Keeper) IncreaseValidatorStake(ctx context.Context, msg *types.MsgStakeUpdate) (types.Validator, error) {
-	k.PanicIfSetupIsIncomplete()
-	return types.Validator{}, k.rejectNativeStakeWrite()
-}
-
-func (k *Keeper) UpdateValidatorSigner(ctx context.Context, msg *types.MsgSignerUpdate) (types.Validator, error) {
-	k.PanicIfSetupIsIncomplete()
-	return types.Validator{}, k.rejectNativeStakeWrite()
-}
-
-func (k *Keeper) ExitValidator(ctx context.Context, msg *types.MsgValidatorExit) (types.Validator, error) {
-	k.PanicIfSetupIsIncomplete()
-	return types.Validator{}, k.rejectNativeStakeWrite()
-}
-
 func (k *Keeper) WithdrawValidatorStake(ctx context.Context, msg *types.MsgWithdrawValidatorStake) (types.Validator, error) {
 	k.PanicIfSetupIsIncomplete()
 	if err := msg.ValidateBasic(); err != nil {

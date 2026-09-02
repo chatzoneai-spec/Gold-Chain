@@ -36,42 +36,6 @@ func (srv msgServer) ApproveValidator(ctx context.Context, msg *types.MsgApprove
 	return &types.MsgApproveValidatorResponse{}, nil
 }
 
-// ValidatorJoin processes a root-anchored validator join.
-func (srv msgServer) ValidatorJoin(ctx context.Context, msg *types.MsgValidatorJoin) (*types.MsgValidatorJoinResponse, error) {
-	var err error
-	startTime := time.Now()
-	defer recordStakeTransactionMetric(api.ValidatorJoinMethod, startTime, &err)
-
-	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator join requires root-anchored stake")
-}
-
-// StakeUpdate sets validator GILT stake from the root-anchored source of truth.
-func (srv msgServer) StakeUpdate(ctx context.Context, msg *types.MsgStakeUpdate) (*types.MsgStakeUpdateResponse, error) {
-	var err error
-	startTime := time.Now()
-	defer recordStakeTransactionMetric(api.StakeUpdateMethod, startTime, &err)
-
-	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "stake update requires root-anchored stake")
-}
-
-// SignerUpdate updates the signer key from the root-anchored source of truth.
-func (srv msgServer) SignerUpdate(ctx context.Context, msg *types.MsgSignerUpdate) (*types.MsgSignerUpdateResponse, error) {
-	var err error
-	startTime := time.Now()
-	defer recordStakeTransactionMetric(api.SignerUpdateMethod, startTime, &err)
-
-	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "signer update requires root-anchored stake")
-}
-
-// ValidatorExit exits a validator through root-anchored Gold Chain state.
-func (srv msgServer) ValidatorExit(ctx context.Context, msg *types.MsgValidatorExit) (*types.MsgValidatorExitResponse, error) {
-	var err error
-	startTime := time.Now()
-	defer recordStakeTransactionMetric(api.ValidatorExitMethod, startTime, &err)
-
-	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator exit requires root-anchored stake")
-}
-
 // WithdrawValidatorStake releases self-staked GILT after exit unbonding.
 func (srv msgServer) WithdrawValidatorStake(ctx context.Context, msg *types.MsgWithdrawValidatorStake) (*types.MsgWithdrawValidatorStakeResponse, error) {
 	validator, err := srv.k.WithdrawValidatorStake(ctx, msg)

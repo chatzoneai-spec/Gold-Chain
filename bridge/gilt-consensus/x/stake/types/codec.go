@@ -12,10 +12,6 @@ import (
 // on the provided LegacyAmino codec. These types are used for Amino JSON serialization.
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	legacy.RegisterAminoMsg(cdc, &MsgApproveValidator{}, "gilt/stake/MsgApproveValidator")
-	legacy.RegisterAminoMsg(cdc, &MsgValidatorJoin{}, "giltconsensusv2/stake/MsgValidatorJoin")
-	legacy.RegisterAminoMsg(cdc, &MsgStakeUpdate{}, "gilt-consensus/stake/MsgStakeUpdate")
-	legacy.RegisterAminoMsg(cdc, &MsgSignerUpdate{}, "gilt-consensus/stake/MsgSignerUpdate")
-	legacy.RegisterAminoMsg(cdc, &MsgValidatorExit{}, "gilt-consensus/stake/MsgValidatorExit")
 	legacy.RegisterAminoMsg(cdc, &MsgWithdrawValidatorStake{}, "gilt/stake/MsgWithdrawValStake")
 	legacy.RegisterAminoMsg(cdc, &MsgDelegateGold{}, "gilt/stake/MsgDelegateGold")
 	legacy.RegisterAminoMsg(cdc, &MsgUndelegateGold{}, "gilt/stake/MsgUndelegateGold")
@@ -25,10 +21,6 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 func RegisterInterfaces(registry types.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
 		&MsgApproveValidator{},
-		&MsgValidatorJoin{},
-		&MsgStakeUpdate{},
-		&MsgSignerUpdate{},
-		&MsgValidatorExit{},
 		&MsgWithdrawValidatorStake{},
 		&MsgDelegateGold{},
 		&MsgUndelegateGold{},
