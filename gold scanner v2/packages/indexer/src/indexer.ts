@@ -11,6 +11,28 @@ import {
 } from "./util.js";
 import { IndexerWriter } from "./writer.js";
 
+export type LiveFeedEvent =
+  | {
+      type: "block";
+      number: string;
+      hash: string;
+      timestamp: string;
+      finalityStatus: string;
+    }
+  | {
+      type: "tx";
+      hash: string;
+      blockNumber: string;
+      from: string;
+      to: string;
+      value: string;
+      finalityStatus: string;
+    };
+
+export type ProcessBlockOptions = {
+  onIndexed?: (event: LiveFeedEvent) => void;
+};
+
 export type IndexerState = {
   tracker: MissingRangeTracker;
   lastIndexedHead: number;
@@ -29,6 +51,7 @@ export async function processBlock(
   blockNumber: number,
   headNumber: number,
   state: IndexerState,
+  options?: ProcessBlockOptions,
 ): Promise<boolean> {
   const block = await rpc.getBlockByNumber(blockNumber);
   if (!block) {
@@ -65,6 +88,14 @@ export async function processBlock(
     finalityStatus,
   });
 
+  options?.onIndexed?.({
+    type: "block",
+    number: String(blockNumber),
+    hash: block.hash,
+    timestamp: block.timestamp,
+    finalityStatus,
+  });
+
   await writer.clearDerivedRowsForBlock(blockNumber);
 
   const activeTxHashes: string[] = [];
@@ -93,6 +124,16 @@ export async function processBlock(
       status,
       finalityStatus,
     });
+
+    options?.onIndexed?.({
+      type: "tx",
+      hash: tx.hash,
+      blockNumber: String(blockNumber),
+      from: tx.from,
+      to: tx.to ?? "",
+      value: weiHexToDecimalString(tx.value),
+      finalityStatus,
+    });
   }
 
   await writer.markOrphanedTransactionsReverted(blockNumber, activeTxHashes);
@@ -108,6 +149,7 @@ export async function indexToHead(
   rpc: RpcClient,
   client: pg.PoolClient,
   state: IndexerState,
+  options?: ProcessBlockOptions,
 ): Promise<number> {
   const head = await rpc.getBlockNumber();
   const writer = new IndexerWriter(client);
@@ -115,7 +157,7 @@ export async function indexToHead(
   const missingRanges = state.tracker.getMissingRanges(head);
   for (const range of missingRanges) {
     for (let blockNumber = range.from; blockNumber <= range.to; blockNumber += 1) {
-      await processBlock(rpc, client, blockNumber, head, state);
+      await processBlock(rpc, client, blockNumber, head, state, options);
     }
   }
 
@@ -135,7 +177,7 @@ export async function indexToHead(
 
   if (reorgFrom !== null) {
     for (let blockNumber = reorgFrom; blockNumber <= head; blockNumber += 1) {
-      await processBlock(rpc, client, blockNumber, head, state);
+      await processBlock(rpc, client, blockNumber, head, state, options);
     }
   } else {
     for (
@@ -143,7 +185,7 @@ export async function indexToHead(
       blockNumber <= head;
       blockNumber += 1
     ) {
-      await processBlock(rpc, client, blockNumber, head, state);
+      await processBlock(rpc, client, blockNumber, head, state, options);
     }
   }
 
@@ -159,11 +201,12 @@ export async function indexBlockNumbers(
   client: pg.PoolClient,
   blockNumbers: number[],
   state: IndexerState,
+  options?: ProcessBlockOptions,
 ): Promise<void> {
   const head = await rpc.getBlockNumber();
 
   for (const blockNumber of blockNumbers) {
-    await processBlock(rpc, client, blockNumber, head, state);
+    await processBlock(rpc, client, blockNumber, head, state, options);
   }
 
   const writer = new IndexerWriter(client);

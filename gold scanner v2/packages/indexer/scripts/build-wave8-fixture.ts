@@ -3,10 +3,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { abiEncodeStatic } from "../src/abi.ts";
 import {
-  GOLD_CHECKPOINT_EVENT_TOPIC,
-  GOLD_GOVERNANCE_EVENT_TOPIC,
-  GOLD_STAKING_EVENT_TOPIC,
-  GOLD_VALIDATOR_EVENT_TOPIC,
+  COMMITMENT_PLANTED_TOPIC,
+  COMMITMENT_UPDATED_TOPIC,
+  DELEGATED_TOPIC,
+  PROPOSAL_CREATED_TOPIC,
+  PROPOSAL_EXECUTED_TOPIC,
+  PROPOSAL_QUEUED_TOPIC,
+  STAKE_CREDIT_INITIALIZED_TOPIC,
+  TOKEN_B1155_DELEGATED_TOPIC,
+  UNDELEGATED_TOPIC,
+  VALIDATOR_CREATED_TOPIC,
+  VALIDATOR_JAILED_TOPIC,
+  VOTE_CAST_TOPIC,
+  COMMISSION_RATE_EDITED_TOPIC,
 } from "../src/gold-topics.ts";
 
 const GOLD = "0x000000000000000000000000000000000000f001";
@@ -15,65 +24,156 @@ const USER_B = "0x0000000000000000000000000000000000000b01";
 const VALIDATOR1 = "0x0000000000000000000000000000000000000d01";
 const VALIDATOR2 = "0x0000000000000000000000000000000000000d02";
 
-const PROPOSAL_WORD = BigInt(
+const PROPOSAL_ID = BigInt(
   "0xc1000000000000000000000000000000000000000000000000000000000001",
 );
-const CHECKPOINT_COMMITTED = BigInt(
-  "0xc2000000000000000000000000000000000000000000000000000000000001",
-);
-const CHECKPOINT_HALTED = BigInt(
-  "0xc2000000000000000000000000000000000000000000000000000000000002",
-);
-const VALIDATOR_SET_HASH = BigInt(
-  "0xc3000000000000000000000000000000000000000000000000000000000001",
-);
+const CHECKPOINT_COMMITTED = 1n;
+const CHECKPOINT_HALTED = 2n;
 const TIMELOCK_ETA_UNIX = 1_700_000_000n;
 
 function padAddress(address: string): string {
   return `0x${address.slice(2).padStart(64, "0")}`;
 }
 
-function stakingLog(
+function encodeProposalCreated(proposalId: bigint, proposer: string): string {
+  const base = 9 * 32;
+  const proposerWord = BigInt(padAddress(proposer));
+  return abiEncodeStatic([
+    proposalId,
+    proposerWord,
+    BigInt(base),
+    BigInt(base + 32),
+    BigInt(base + 64),
+    BigInt(base + 96),
+    0n,
+    0n,
+    BigInt(base + 128),
+    0n,
+    0n,
+    0n,
+    0n,
+    0n,
+  ]);
+}
+
+function encodeVoteCast(proposalId: bigint, support: number): string {
+  return abiEncodeStatic([proposalId, BigInt(support), 1n, 128n, 0n]);
+}
+
+function stakingDelegatedLog(
   txHash: string,
   blockNumber: number,
   logIndex: number,
-  staker: string,
-  validator: string,
-  eventType: bigint,
+  operator: string,
+  delegator: string,
+  tokenId: bigint,
   amount: bigint,
-  assetCode: bigint,
 ) {
   return {
     transactionHash: txHash,
     blockNumber: `0x${blockNumber.toString(16)}`,
     address: GOLD,
     topics: [
-      GOLD_STAKING_EVENT_TOPIC,
-      padAddress(staker),
-      padAddress(validator),
+      TOKEN_B1155_DELEGATED_TOPIC,
+      padAddress(operator),
+      padAddress(delegator),
+      `0x${tokenId.toString(16).padStart(64, "0")}`,
     ],
-    data: abiEncodeStatic([eventType, amount, assetCode]),
+    data: abiEncodeStatic([amount]),
     logIndex: `0x${logIndex.toString(16)}`,
   };
 }
 
-function validatorLog(
+function stakingGiltLog(
   txHash: string,
   blockNumber: number,
   logIndex: number,
-  validator: string,
-  eventType: bigint,
-  amount: bigint,
-  commissionBps: bigint,
-  jailed: bigint,
-  elected: bigint,
+  operator: string,
+  delegator: string,
+  topic: string,
+  shares: bigint,
+  giltAmount: bigint,
 ) {
   return {
     transactionHash: txHash,
     blockNumber: `0x${blockNumber.toString(16)}`,
     address: GOLD,
-    topics: [GOLD_VALIDATOR_EVENT_TOPIC, padAddress(validator)],
-    data: abiEncodeStatic([eventType, amount, commissionBps, jailed, elected]),
+    topics: [topic, padAddress(operator), padAddress(delegator)],
+    data: abiEncodeStatic([shares, giltAmount]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function validatorCreatedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  validator: string,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      VALIDATOR_CREATED_TOPIC,
+      padAddress(validator),
+      padAddress(validator),
+      padAddress(GOLD),
+    ],
+    data: "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000",
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function commissionEditedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  validator: string,
+  commissionBps: bigint,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [COMMISSION_RATE_EDITED_TOPIC, padAddress(validator)],
+    data: abiEncodeStatic([commissionBps]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function stakeCreditInitializedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  validator: string,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      STAKE_CREDIT_INITIALIZED_TOPIC,
+      padAddress(validator),
+      padAddress(GOLD),
+    ],
+    data: "0x",
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function validatorJailedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  validator: string,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [VALIDATOR_JAILED_TOPIC, padAddress(validator)],
+    data: "0x",
     logIndex: `0x${logIndex.toString(16)}`,
   };
 }
@@ -82,43 +182,58 @@ function governanceLog(
   txHash: string,
   blockNumber: number,
   logIndex: number,
-  topicAddress: string | null,
-  eventType: bigint,
-  supportCode: bigint,
-  timelockEtaUnix: bigint,
+  topic: string,
+  data: string,
+  voter?: string,
 ) {
-  const topics = [GOLD_GOVERNANCE_EVENT_TOPIC];
-  if (topicAddress) {
-    topics.push(padAddress(topicAddress));
+  const topics = [topic];
+  if (voter) {
+    topics.push(padAddress(voter));
   }
   return {
     transactionHash: txHash,
     blockNumber: `0x${blockNumber.toString(16)}`,
     address: GOLD,
     topics,
-    data: abiEncodeStatic([
-      eventType,
-      PROPOSAL_WORD,
-      supportCode,
-      timelockEtaUnix,
-    ]),
+    data,
     logIndex: `0x${logIndex.toString(16)}`,
   };
 }
 
-function checkpointLog(
+function checkpointPlantedLog(
   txHash: string,
   blockNumber: number,
   logIndex: number,
-  checkpointWord: bigint,
-  statusCode: bigint,
+  epoch: bigint,
 ) {
   return {
     transactionHash: txHash,
     blockNumber: `0x${blockNumber.toString(16)}`,
     address: GOLD,
-    topics: [GOLD_CHECKPOINT_EVENT_TOPIC],
-    data: abiEncodeStatic([checkpointWord, VALIDATOR_SET_HASH, statusCode]),
+    topics: [
+      COMMITMENT_PLANTED_TOPIC,
+      `0x${epoch.toString(16).padStart(64, "0")}`,
+    ],
+    data: abiEncodeStatic([1n, 1n]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function checkpointHaltedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  epoch: bigint,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      COMMITMENT_UPDATED_TOPIC,
+      `0x${epoch.toString(16).padStart(64, "0")}`,
+    ],
+    data: abiEncodeStatic([0n, 1n]),
     logIndex: `0x${logIndex.toString(16)}`,
   };
 }
@@ -195,8 +310,17 @@ const blockDefs = [
       {
         hash: TX.b1,
         logs: [
-          stakingLog(TX.b1, 1, 0, USER_A, VALIDATOR1, 0n, 10_000n, 0n),
-          stakingLog(TX.b1, 1, 1, USER_A, VALIDATOR1, 0n, 500n, 1n),
+          stakingGiltLog(
+            TX.b1,
+            1,
+            0,
+            VALIDATOR1,
+            USER_A,
+            DELEGATED_TOPIC,
+            10_000n,
+            10_000n,
+          ),
+          stakingDelegatedLog(TX.b1, 1, 1, VALIDATOR1, USER_A, 1n, 500n),
         ],
       },
     ],
@@ -206,7 +330,18 @@ const blockDefs = [
     txs: [
       {
         hash: TX.b2,
-        logs: [stakingLog(TX.b2, 2, 0, USER_A, VALIDATOR1, 2n, 2_000n, 0n)],
+        logs: [
+          stakingGiltLog(
+            TX.b2,
+            2,
+            0,
+            VALIDATOR1,
+            USER_A,
+            UNDELEGATED_TOPIC,
+            2_000n,
+            2_000n,
+          ),
+        ],
       },
     ],
   },
@@ -216,14 +351,13 @@ const blockDefs = [
       {
         hash: TX.b3a,
         logs: [
-          validatorLog(TX.b3a, 3, 0, VALIDATOR1, 0n, 0n, 500n, 0n, 0n),
+          validatorCreatedLog(TX.b3a, 3, 0, VALIDATOR1),
+          commissionEditedLog(TX.b3a, 3, 1, VALIDATOR1, 500n),
         ],
       },
       {
         hash: TX.b3b,
-        logs: [
-          validatorLog(TX.b3b, 3, 0, VALIDATOR1, 4n, 0n, 0n, 0n, 1n),
-        ],
+        logs: [stakeCreditInitializedLog(TX.b3b, 3, 0, VALIDATOR1)],
       },
     ],
   },
@@ -232,9 +366,7 @@ const blockDefs = [
     txs: [
       {
         hash: TX.b4,
-        logs: [
-          validatorLog(TX.b4, 4, 0, VALIDATOR2, 2n, 0n, 0n, 1n, 0n),
-        ],
+        logs: [validatorJailedLog(TX.b4, 4, 0, VALIDATOR2)],
       },
     ],
   },
@@ -244,13 +376,28 @@ const blockDefs = [
       {
         hash: TX.b5a,
         logs: [
-          governanceLog(TX.b5a, 5, 0, USER_A, 0n, 0n, 0n),
-          checkpointLog(TX.b5a, 5, 1, CHECKPOINT_COMMITTED, 0n),
+          governanceLog(
+            TX.b5a,
+            5,
+            0,
+            PROPOSAL_CREATED_TOPIC,
+            encodeProposalCreated(PROPOSAL_ID, USER_A),
+          ),
+          checkpointPlantedLog(TX.b5a, 5, 1, CHECKPOINT_COMMITTED),
         ],
       },
       {
         hash: TX.b5b,
-        logs: [governanceLog(TX.b5b, 5, 0, USER_B, 1n, 1n, 0n)],
+        logs: [
+          governanceLog(
+            TX.b5b,
+            5,
+            0,
+            VOTE_CAST_TOPIC,
+            encodeVoteCast(PROPOSAL_ID, 1),
+            USER_B,
+          ),
+        ],
       },
     ],
   },
@@ -260,12 +407,26 @@ const blockDefs = [
       {
         hash: TX.b6a,
         logs: [
-          governanceLog(TX.b6a, 6, 0, null, 2n, 0n, TIMELOCK_ETA_UNIX),
+          governanceLog(
+            TX.b6a,
+            6,
+            0,
+            PROPOSAL_QUEUED_TOPIC,
+            abiEncodeStatic([PROPOSAL_ID, TIMELOCK_ETA_UNIX]),
+          ),
         ],
       },
       {
         hash: TX.b6b,
-        logs: [governanceLog(TX.b6b, 6, 0, null, 3n, 0n, 0n)],
+        logs: [
+          governanceLog(
+            TX.b6b,
+            6,
+            0,
+            PROPOSAL_EXECUTED_TOPIC,
+            abiEncodeStatic([PROPOSAL_ID]),
+          ),
+        ],
       },
     ],
   },
@@ -278,7 +439,7 @@ const blockDefs = [
     txs: [
       {
         hash: TX.b8,
-        logs: [checkpointLog(TX.b8, 8, 0, CHECKPOINT_HALTED, 2n)],
+        logs: [checkpointHaltedLog(TX.b8, 8, 0, CHECKPOINT_HALTED)],
       },
     ],
   },

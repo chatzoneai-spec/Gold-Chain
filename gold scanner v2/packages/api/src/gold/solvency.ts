@@ -12,20 +12,38 @@ const LOCKED_SUM_SQL = `
     AND source_layer = 'ethereum'
 `;
 
+const RELEASED_SUM_SQL = `
+  SELECT COALESCE(SUM(root_amount::numeric), 0)::text AS total
+  FROM bridge_transfers
+  WHERE route_asset = $1
+    AND bridge_state = 'released'
+    AND finality_status = 'finalized'
+    AND source_layer = 'ethereum'
+`;
+
 const SUPPLY_SQL = `
   SELECT COALESCE(supply::text, '0') AS supply
   FROM gold_supply
   WHERE token_id = $1
 `;
 
-async function lockedTotal(
+function netLocked(locked: string, released: string): string {
+  const lockedAmount = BigInt(locked);
+  const releasedAmount = BigInt(released);
+  return (lockedAmount - releasedAmount).toString();
+}
+
+async function outstandingLockedTotal(
   client: Client,
   routeAsset: "paxg" | "xaut",
 ): Promise<string> {
-  const { rows } = await client.query<{ total: string }>(LOCKED_SUM_SQL, [
-    routeAsset,
+  const [lockedResult, releasedResult] = await Promise.all([
+    client.query<{ total: string }>(LOCKED_SUM_SQL, [routeAsset]),
+    client.query<{ total: string }>(RELEASED_SUM_SQL, [routeAsset]),
   ]);
-  return rows[0]?.total ?? "0";
+  const locked = lockedResult.rows[0]?.total ?? "0";
+  const released = releasedResult.rows[0]?.total ?? "0";
+  return netLocked(locked, released);
 }
 
 async function goldSupply(client: Client, tokenId: string): Promise<string> {
@@ -38,8 +56,8 @@ async function goldSupply(client: Client, tokenId: string): Promise<string> {
 /** Single owner for solvency math — reads finalized canonical rows only. */
 export async function computeSolvency(client: Client): Promise<SolvencyResult> {
   const [paxgLocked, xautLocked, goldId1, goldId2] = await Promise.all([
-    lockedTotal(client, "paxg"),
-    lockedTotal(client, "xaut"),
+    outstandingLockedTotal(client, "paxg"),
+    outstandingLockedTotal(client, "xaut"),
     goldSupply(client, "1"),
     goldSupply(client, "2"),
   ]);

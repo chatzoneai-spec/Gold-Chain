@@ -17,6 +17,10 @@ export type VerifyRequest = {
   constructorArguments?: string;
 };
 
+export type SolcCompiler = {
+  compile: typeof solc.compile;
+};
+
 export function sanitizeVerifyRequest(body: unknown): VerifyRequest {
   if (!body || typeof body !== "object") {
     throw new VerifyError("invalid_body", 400);
@@ -72,7 +76,7 @@ export class VerifyError extends Error {
   }
 }
 
-function normalizeSolcVersion(version: string): string {
+export function normalizeSolcVersion(version: string): string {
   const match = version.match(/(\d+\.\d+\.\d+)/);
   if (!match) {
     throw new VerifyError("invalid_compiler_version", 400);
@@ -80,11 +84,44 @@ function normalizeSolcVersion(version: string): string {
   return match[1]!;
 }
 
-function compileContract(request: VerifyRequest): {
+export function bundledSolcVersion(): string {
+  return normalizeSolcVersion(solc.version());
+}
+
+export function loadSolcCompiler(
+  version: string,
+  loader: typeof solc.loadRemoteVersion = solc.loadRemoteVersion.bind(solc),
+): Promise<SolcCompiler> {
+  const normalized = normalizeSolcVersion(version);
+  if (normalized === bundledSolcVersion()) {
+    return Promise.resolve(solc as SolcCompiler);
+  }
+
+  const remoteVersion = normalized.startsWith("v")
+    ? normalized
+    : `v${normalized}`;
+
+  return new Promise((resolve, reject) => {
+    loader(remoteVersion, (error, compiler) => {
+      if (error || !compiler) {
+        reject(new VerifyError("compiler_version_unavailable", 400));
+        return;
+      }
+      resolve(compiler as SolcCompiler);
+    });
+  });
+}
+
+async function compileContract(
+  request: VerifyRequest,
+  loader?: typeof solc.loadRemoteVersion,
+): Promise<{
   bytecode: string;
   abi: string;
-} {
-  normalizeSolcVersion(request.compilerVersion);
+  compilerVersion: string;
+}> {
+  const normalized = normalizeSolcVersion(request.compilerVersion);
+  const compiler = await loadSolcCompiler(request.compilerVersion, loader);
   const input = {
     language: "Solidity",
     sources: {
@@ -105,7 +142,9 @@ function compileContract(request: VerifyRequest): {
   };
 
   const output = JSON.parse(
-    solc.compile(JSON.stringify(input), { import: () => ({ contents: "" }) }),
+    compiler.compile(JSON.stringify(input), {
+      import: () => ({ contents: "" }),
+    }),
   ) as {
     errors?: Array<{ severity: string; formattedMessage: string }>;
     contracts?: Record<
@@ -136,6 +175,7 @@ function compileContract(request: VerifyRequest): {
   return {
     bytecode,
     abi: JSON.stringify(firstContract.abi),
+    compilerVersion: normalized,
   };
 }
 
@@ -148,6 +188,7 @@ function bytecodeMatches(onChain: string, compiled: string): boolean {
 export async function handleVerify(
   pool: Pool,
   body: unknown,
+  loader?: typeof solc.loadRemoteVersion,
 ): Promise<JsonResponse> {
   let request: VerifyRequest;
   try {
@@ -170,9 +211,9 @@ export async function handleVerify(
     return { status: 404, body: { error: "not_found" } };
   }
 
-  let compiled: { bytecode: string; abi: string };
+  let compiled: { bytecode: string; abi: string; compilerVersion: string };
   try {
-    compiled = compileContract(request);
+    compiled = await compileContract(request, loader);
   } catch (error) {
     if (error instanceof VerifyError) {
       return { status: error.status, body: { error: error.message } };
@@ -200,7 +241,7 @@ export async function handleVerify(
       request.address,
       request.source,
       compiled.abi,
-      request.compilerVersion,
+      compiled.compilerVersion,
       request.optimizationEnabled ?? false,
       request.optimizationRuns ?? null,
       request.evmVersion ?? null,
@@ -208,5 +249,12 @@ export async function handleVerify(
     ],
   );
 
-  return { status: 200, body: { verified: true, address: request.address } };
+  return {
+    status: 200,
+    body: {
+      verified: true,
+      address: request.address,
+      compilerVersion: compiled.compilerVersion,
+    },
+  };
 }

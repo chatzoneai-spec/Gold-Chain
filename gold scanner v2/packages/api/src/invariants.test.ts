@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
-import { XAUT_SCALE } from "../../indexer/src/gold-topics.js";
+import { correlationFromAddress, XAUT_SCALE } from "../../indexer/src/gold-topics.js";
 import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import { computeSolvency } from "./gold/solvency.js";
@@ -14,7 +14,9 @@ import {
 const CONFIRMATION_DEPTH = "2";
 
 const CORR = {
-  pending: "0xc000000000000000000000000000000000000000000000000000000000000005",
+  pending: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000005",
+  ),
 };
 
 async function indexWave3(client: pg.PoolClient): Promise<void> {
@@ -56,7 +58,7 @@ describe("solvency invariants", () => {
 
       const solvency = await computeSolvency(client);
 
-      assert.equal(solvency.paxg.lockedOnEthereum, solvency.paxg.goldSupply);
+      assert.equal(solvency.paxg.lockedOnEthereum, "850");
       assert.equal(
         BigInt(solvency.xaut.lockedOnEthereum),
         BigInt(solvency.xaut.goldSupply) * XAUT_SCALE,
@@ -94,12 +96,7 @@ describe("solvency invariants", () => {
       assert.equal(solvency.xaut.goldTokenId, "2");
       assert.equal(solvency.paxg.routeAsset, "paxg");
       assert.equal(solvency.xaut.routeAsset, "xaut");
-      assert.equal(solvency.paxg.lockedOnEthereum, solvency.paxg.goldSupply);
-      assert.equal(
-        BigInt(solvency.xaut.lockedOnEthereum),
-        BigInt(solvency.xaut.goldSupply) * XAUT_SCALE,
-      );
-      assert.equal(solvency.paxg.lockedOnEthereum, "1150");
+      assert.equal(solvency.paxg.lockedOnEthereum, "850");
       assert.equal(solvency.paxg.goldSupply, "1150");
       assert.equal(solvency.xaut.lockedOnEthereum, "12000000000000");
       assert.equal(solvency.xaut.goldSupply, "12");

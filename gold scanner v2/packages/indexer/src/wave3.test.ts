@@ -3,7 +3,7 @@ import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import { createIndexerState, indexToHead } from "./indexer.js";
 import { FixtureRpcClient } from "./rpc/fixture-client.js";
-import { XAUT_SCALE } from "./gold-topics.js";
+import { correlationFromAddress, XAUT_SCALE } from "./gold-topics.js";
 import { migrate, resetDatabase, DATABASE_URL } from "./test/db.js";
 
 const CONFIRMATION_DEPTH = "2";
@@ -12,11 +12,21 @@ const USER_A = "0x0000000000000000000000000000000000000a01";
 const USER_B = "0x0000000000000000000000000000000000000b01";
 
 const CORR = {
-  paxg: "0xc000000000000000000000000000000000000000000000000000000000000001",
-  xaut: "0xc000000000000000000000000000000000000000000000000000000000000002",
-  xautBad: "0xc000000000000000000000000000000000000000000000000000000000000003",
-  redeem: "0xc000000000000000000000000000000000000000000000000000000000000004",
-  pending: "0xc000000000000000000000000000000000000000000000000000000000000005",
+  paxg: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000001",
+  ),
+  xaut: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000002",
+  ),
+  xautBad: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000003",
+  ),
+  redeem: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000004",
+  ),
+  pending: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000005",
+  ),
 };
 
 async function withPoolClient<T>(

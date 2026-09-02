@@ -2,12 +2,20 @@ import type { IndexerWriter } from "../writer.js";
 import type { RpcLog } from "../rpc/types.js";
 import { abiDecodeStatic } from "../abi.js";
 import {
-  GOLD_GOVERNANCE_EVENT_TOPIC,
-  governanceEventTypeFromCode,
+  GOLD_GOVERNANCE_EVENT_TOPICS,
   governanceSupportFromCode,
+  PROPOSAL_CREATED_TOPIC,
+  PROPOSAL_EXECUTED_TOPIC,
+  PROPOSAL_QUEUED_TOPIC,
+  topicMatches,
+  VOTE_CAST_TOPIC,
 } from "../gold-topics.js";
 import { hexToNumber, topicToAddress } from "../util.js";
 import type { FinalityStatus } from "../finality.js";
+
+function proposalIdFromWord(word: bigint): string {
+  return `0x${word.toString(16).padStart(64, "0")}`;
+}
 
 export async function processGovernanceEvents(
   writer: IndexerWriter,
@@ -15,42 +23,82 @@ export async function processGovernanceEvents(
   finalityStatus: FinalityStatus,
 ): Promise<void> {
   for (const log of logs) {
-    if (log.topics[0]?.toLowerCase() !== GOLD_GOVERNANCE_EVENT_TOPIC) {
+    if (!topicMatches(log.topics[0], GOLD_GOVERNANCE_EVENT_TOPICS)) {
       continue;
     }
 
-    const [eventTypeCode, proposalWord, supportCode, timelockEtaUnix] =
-      abiDecodeStatic(log.data, 4);
-    const eventType = governanceEventTypeFromCode(Number(eventTypeCode));
-    const proposalId = `0x${proposalWord.toString(16).padStart(64, "0")}`;
-    const support = governanceSupportFromCode(supportCode);
+    const topic0 = log.topics[0]!.toLowerCase();
+    const blockNumber = hexToNumber(log.blockNumber);
 
-    let proposerAddress: string | null = null;
-    let voterAddress: string | null = null;
-    if (log.topics[1]) {
-      const topicAddress = topicToAddress(log.topics[1]);
-      if (eventType === "proposal_created") {
-        proposerAddress = topicAddress;
-      } else if (eventType === "vote") {
-        voterAddress = topicAddress;
-      }
+    if (topic0 === PROPOSAL_CREATED_TOPIC) {
+      const [proposalIdWord, proposerWord] = abiDecodeStatic(log.data, 2);
+      const proposerAddress = topicToAddress(
+        `0x${proposerWord.toString(16).padStart(64, "0")}`,
+      );
+      await writer.insertGovernanceEvent({
+        blockNumber,
+        transactionHash: log.transactionHash,
+        eventType: "proposal_created",
+        proposerAddress,
+        voterAddress: null,
+        proposalId: proposalIdFromWord(proposalIdWord),
+        support: null,
+        timelockEta: null,
+        finalityStatus,
+      });
+      continue;
     }
 
-    let timelockEta: Date | null = null;
-    if (eventType === "queued" && timelockEtaUnix !== 0n) {
-      timelockEta = new Date(Number(timelockEtaUnix) * 1000);
+    if (topic0 === VOTE_CAST_TOPIC) {
+      const voterAddress = topicToAddress(log.topics[1]!);
+      const [proposalIdWord, supportCode] = abiDecodeStatic(log.data, 2);
+      await writer.insertGovernanceEvent({
+        blockNumber,
+        transactionHash: log.transactionHash,
+        eventType: "vote",
+        proposerAddress: null,
+        voterAddress,
+        proposalId: proposalIdFromWord(proposalIdWord),
+        support: governanceSupportFromCode(supportCode),
+        timelockEta: null,
+        finalityStatus,
+      });
+      continue;
     }
 
-    await writer.insertGovernanceEvent({
-      blockNumber: hexToNumber(log.blockNumber),
-      transactionHash: log.transactionHash,
-      eventType,
-      proposerAddress,
-      voterAddress,
-      proposalId,
-      support,
-      timelockEta,
-      finalityStatus,
-    });
+    if (topic0 === PROPOSAL_QUEUED_TOPIC) {
+      const [proposalIdWord, timelockEtaUnix] = abiDecodeStatic(log.data, 2);
+      const timelockEta =
+        timelockEtaUnix === 0n
+          ? null
+          : new Date(Number(timelockEtaUnix) * 1000);
+      await writer.insertGovernanceEvent({
+        blockNumber,
+        transactionHash: log.transactionHash,
+        eventType: "queued",
+        proposerAddress: null,
+        voterAddress: null,
+        proposalId: proposalIdFromWord(proposalIdWord),
+        support: null,
+        timelockEta,
+        finalityStatus,
+      });
+      continue;
+    }
+
+    if (topic0 === PROPOSAL_EXECUTED_TOPIC) {
+      const [proposalIdWord] = abiDecodeStatic(log.data, 1);
+      await writer.insertGovernanceEvent({
+        blockNumber,
+        transactionHash: log.transactionHash,
+        eventType: "executed",
+        proposerAddress: null,
+        voterAddress: null,
+        proposalId: proposalIdFromWord(proposalIdWord),
+        support: null,
+        timelockEta: null,
+        finalityStatus,
+      });
+    }
   }
 }

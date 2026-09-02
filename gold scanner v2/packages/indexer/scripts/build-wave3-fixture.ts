@@ -1,15 +1,22 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { abiEncodeStatic, bytes32FromTxHash } from "../src/abi.ts";
+import { abiEncodeStatic } from "../src/abi.ts";
 import {
-  GOLD_BRIDGE_EVENT_TOPIC,
-  GOLD_CHECKPOINT_EVENT_TOPIC,
-  GOLD_GOVERNANCE_EVENT_TOPIC,
-  GOLD_STAKING_EVENT_TOPIC,
-  GOLD_VALIDATOR_EVENT_TOPIC,
+  COMMITMENT_PLANTED_TOPIC,
+  COMMITMENT_UPDATED_TOPIC,
+  correlationFromAddress,
+  DELEGATED_TOPIC,
+  EXITED_SCALED_ERC1155_TOPIC,
+  GOLD_REDEMPTION_REQUESTED_TOPIC,
+  LOCKED_SCALED_ERC1155_TOPIC,
+  MIGRATION_MINT_TOPIC,
+  PROPOSAL_CREATED_TOPIC,
+  TOKEN_B1155_DELEGATED_TOPIC,
   TRANSFER_BATCH_TOPIC,
   TRANSFER_SINGLE_TOPIC,
+  VALIDATOR_CREATED_TOPIC,
+  COMMISSION_RATE_EDITED_TOPIC,
 } from "../src/gold-topics.ts";
 
 const GOLD = "0x000000000000000000000000000000000000f001";
@@ -18,9 +25,15 @@ const USER_B = "0x0000000000000000000000000000000000000b01";
 const USER_C = "0x0000000000000000000000000000000000000c01";
 const OPERATOR = "0x0000000000000000000000000000000000000d01";
 const ZERO = "0x0000000000000000000000000000000000000000";
+const ROOT_TOKEN_PAXG = "0x000000000000000000000000000000000000e101";
+const ROOT_TOKEN_XAUT = "0x000000000000000000000000000000000000e102";
 
 function padAddress(address: string): string {
   return `0x${address.slice(2).padStart(64, "0")}`;
+}
+
+function correlationAddress(correlation: string): string {
+  return `0x${correlation.slice(2).padStart(40, "0").slice(-40)}`;
 }
 
 function encodeBatch(ids: bigint[], values: bigint[]): string {
@@ -35,29 +48,24 @@ function encodeBatch(ids: bigint[], values: bigint[]): string {
   ]);
 }
 
-function encodeBridge(
-  route: number,
-  state: number,
-  direction: number,
-  layer: number,
-  exact: boolean,
-  root: bigint,
-  child: bigint,
-  rootTx: string,
-  childTx: string,
-): string {
-  const rootWord = bytes32FromTxHash(rootTx);
-  const childWord = bytes32FromTxHash(childTx);
+function encodeProposalCreated(proposalId: bigint, proposer: string): string {
+  const base = 9 * 32;
+  const proposerWord = BigInt(padAddress(proposer));
   return abiEncodeStatic([
-    BigInt(route),
-    BigInt(state),
-    BigInt(direction),
-    BigInt(layer),
-    exact ? 1n : 0n,
-    root,
-    child,
-    rootWord,
-    childWord,
+    proposalId,
+    proposerWord,
+    BigInt(base),
+    BigInt(base + 32),
+    BigInt(base + 64),
+    BigInt(base + 96),
+    0n,
+    0n,
+    BigInt(base + 128),
+    0n,
+    0n,
+    0n,
+    0n,
+    0n,
   ]);
 }
 
@@ -109,19 +117,100 @@ function batchLog(
   };
 }
 
-function bridgeLog(
+function lockedScaledLog(
   txHash: string,
   blockNumber: number,
   logIndex: number,
-  correlationId: string,
-  data: string,
+  depositor: string,
+  correlation: string,
+  rootToken: string,
+  childTokenId: bigint,
+  rootAmount: bigint,
+  childAmount: bigint,
 ) {
   return {
     transactionHash: txHash,
     blockNumber: `0x${blockNumber.toString(16)}`,
     address: GOLD,
-    topics: [GOLD_BRIDGE_EVENT_TOPIC, correlationId],
-    data,
+    topics: [
+      LOCKED_SCALED_ERC1155_TOPIC,
+      padAddress(depositor),
+      padAddress(correlationAddress(correlation)),
+      padAddress(rootToken),
+    ],
+    data: abiEncodeStatic([childTokenId, rootAmount, childAmount]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function migrationMintLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  account: string,
+  tokenId: bigint,
+  amount: bigint,
+  migrationRef: string,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      MIGRATION_MINT_TOPIC,
+      padAddress(account),
+      `0x${tokenId.toString(16).padStart(64, "0")}`,
+    ],
+    data: abiEncodeStatic([amount, BigInt(migrationRef)]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function goldRedemptionRequestedLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  redeemer: string,
+  correlation: string,
+  tokenId: bigint,
+  goldAmount: bigint,
+  rootReleaseAmount: bigint,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      GOLD_REDEMPTION_REQUESTED_TOPIC,
+      padAddress(redeemer),
+      padAddress(correlationAddress(correlation)),
+      `0x${tokenId.toString(16).padStart(64, "0")}`,
+    ],
+    data: abiEncodeStatic([goldAmount, rootReleaseAmount]),
+    logIndex: `0x${logIndex.toString(16)}`,
+  };
+}
+
+function exitedScaledLog(
+  txHash: string,
+  blockNumber: number,
+  logIndex: number,
+  correlation: string,
+  rootToken: string,
+  childTokenId: bigint,
+  childAmount: bigint,
+  rootAmount: bigint,
+) {
+  return {
+    transactionHash: txHash,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+    address: GOLD,
+    topics: [
+      EXITED_SCALED_ERC1155_TOPIC,
+      padAddress(correlationAddress(correlation)),
+      padAddress(rootToken),
+    ],
+    data: abiEncodeStatic([childTokenId, childAmount, rootAmount]),
     logIndex: `0x${logIndex.toString(16)}`,
   };
 }
@@ -143,32 +232,29 @@ const TX = {
   b8b: "0x200000000000000000000000000000000000000000000000000000000000000e",
 };
 
-const CORR = {
-  paxg: "0xc000000000000000000000000000000000000000000000000000000000000001",
-  xaut: "0xc000000000000000000000000000000000000000000000000000000000000002",
-  xautBad: "0xc000000000000000000000000000000000000000000000000000000000000003",
-  redeem: "0xc000000000000000000000000000000000000000000000000000000000000004",
-  pending: "0xc000000000000000000000000000000000000000000000000000000000000005",
+/** 160-bit-safe correlation ids that round-trip through indexed address topics. */
+export const CORR = {
+  paxg: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000001",
+  ),
+  xaut: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000002",
+  ),
+  xautBad: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000003",
+  ),
+  redeem: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000004",
+  ),
+  pending: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000005",
+  ),
 };
 
-const ROOT = {
-  paxg: "0x1000000000000000000000000000000000000000000000000000000000000010",
-  xaut: "0x1000000000000000000000000000000000000000000000000000000000000012",
-  xautBad: "0x1000000000000000000000000000000000000000000000000000000000000014",
-  redeem: "0x1000000000000000000000000000000000000000000000000000000000000030",
-  pending: "0x1000000000000000000000000000000000000000000000000000000000000020",
-};
+const PROPOSAL_ID = BigInt(
+  "0xc1000000000000000000000000000000000000000000000000000000000001",
+);
 
-const CHILD = {
-  paxg: "0x1000000000000000000000000000000000000000000000000000000000000011",
-  xaut: "0x1000000000000000000000000000000000000000000000000000000000000013",
-  pending: "0x1000000000000000000000000000000000000000000000000000000000000021",
-  redeem: "0x1000000000000000000000000000000000000000000000000000000000000031",
-};
-
-const ZERO_TX = "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-/** Finalized solvency targets after indexing (confirmation depth 2, head 8). */
 const PAXG_LOCKED_ROOT = 1150n;
 const PAXG_BRIDGE_CHILD = 1000n;
 const XAUT_GOLD_SUPPLY = 12n;
@@ -274,24 +360,30 @@ const blockDefs = [
       {
         hash: TX.b5a,
         logs: [
-          bridgeLog(
+          lockedScaledLog(
             TX.b5a,
             5,
             0,
+            USER_A,
             CORR.paxg,
-            encodeBridge(0, 0, 0, 0, true, PAXG_LOCKED_ROOT, PAXG_LOCKED_ROOT, ROOT.paxg, ZERO_TX),
+            ROOT_TOKEN_PAXG,
+            1n,
+            PAXG_LOCKED_ROOT,
+            PAXG_LOCKED_ROOT,
           ),
         ],
       },
       {
         hash: TX.b5b,
         logs: [
-          bridgeLog(
+          migrationMintLog(
             TX.b5b,
             5,
             0,
+            USER_A,
+            1n,
+            PAXG_BRIDGE_CHILD,
             CORR.paxg,
-            encodeBridge(0, 2, 0, 1, true, PAXG_BRIDGE_CHILD, PAXG_BRIDGE_CHILD, ROOT.paxg, CHILD.paxg),
           ),
           singleLog(TX.b5b, 5, 1, ZERO, USER_A, 1n, PAXG_BRIDGE_CHILD),
         ],
@@ -304,24 +396,30 @@ const blockDefs = [
       {
         hash: TX.b6a,
         logs: [
-          bridgeLog(
+          lockedScaledLog(
             TX.b6a,
             6,
             0,
+            USER_A,
             CORR.xaut,
-            encodeBridge(1, 0, 0, 0, true, XAUT_LOCKED_ROOT, XAUT_GOLD_SUPPLY, ROOT.xaut, ZERO_TX),
+            ROOT_TOKEN_XAUT,
+            2n,
+            XAUT_LOCKED_ROOT,
+            XAUT_GOLD_SUPPLY,
           ),
         ],
       },
       {
         hash: TX.b6b,
         logs: [
-          bridgeLog(
+          migrationMintLog(
             TX.b6b,
             6,
             0,
+            USER_A,
+            2n,
+            XAUT_GOLD_SUPPLY,
             CORR.xaut,
-            encodeBridge(1, 2, 0, 1, true, XAUT_LOCKED_ROOT, XAUT_GOLD_SUPPLY, ROOT.xaut, CHILD.xaut),
           ),
           singleLog(TX.b6b, 6, 1, ZERO, USER_A, 2n, XAUT_GOLD_SUPPLY),
         ],
@@ -329,24 +427,31 @@ const blockDefs = [
       {
         hash: TX.b6c,
         logs: [
-          bridgeLog(
+          lockedScaledLog(
             TX.b6c,
             6,
             0,
+            USER_A,
             CORR.xautBad,
-            encodeBridge(1, 1, 0, 0, false, XAUT_BAD_ROOT, XAUT_GOLD_SUPPLY, ROOT.xautBad, ZERO_TX),
+            ROOT_TOKEN_XAUT,
+            2n,
+            XAUT_BAD_ROOT,
+            XAUT_GOLD_SUPPLY,
           ),
         ],
       },
       {
         hash: TX.b6d,
         logs: [
-          bridgeLog(
+          goldRedemptionRequestedLog(
             TX.b6d,
             6,
             0,
+            USER_A,
             CORR.redeem,
-            encodeBridge(0, 3, 1, 1, true, 300n, 300n, ROOT.redeem, CHILD.redeem),
+            1n,
+            300n,
+            300n,
           ),
           singleLog(TX.b6d, 6, 1, USER_A, ZERO, 1n, 300n),
         ],
@@ -354,12 +459,15 @@ const blockDefs = [
       {
         hash: TX.b6e,
         logs: [
-          bridgeLog(
+          exitedScaledLog(
             TX.b6e,
             6,
             0,
             CORR.redeem,
-            encodeBridge(0, 4, 1, 0, true, 300n, 300n, ROOT.redeem, CHILD.redeem),
+            ROOT_TOKEN_PAXG,
+            1n,
+            300n,
+            300n,
           ),
         ],
       },
@@ -370,45 +478,51 @@ const blockDefs = [
             transactionHash: TX.b6f,
             blockNumber: "0x6",
             address: GOLD,
-            topics: [GOLD_STAKING_EVENT_TOPIC, padAddress(USER_A)],
-            data: abiEncodeStatic([0n, 5000n]),
+            topics: [
+              TOKEN_B1155_DELEGATED_TOPIC,
+              padAddress(OPERATOR),
+              padAddress(USER_A),
+              "0x0000000000000000000000000000000000000000000000000000000000000001",
+            ],
+            data: abiEncodeStatic([5000n]),
             logIndex: "0x0",
           },
           {
             transactionHash: TX.b6f,
             blockNumber: "0x6",
             address: GOLD,
-            topics: [GOLD_VALIDATOR_EVENT_TOPIC, padAddress(OPERATOR)],
-            data: abiEncodeStatic([1n, 0n]),
+            topics: [
+              VALIDATOR_CREATED_TOPIC,
+              padAddress(OPERATOR),
+              padAddress(OPERATOR),
+              padAddress(GOLD),
+            ],
+            data: "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000",
             logIndex: "0x1",
           },
           {
             transactionHash: TX.b6f,
             blockNumber: "0x6",
             address: GOLD,
-            topics: [GOLD_GOVERNANCE_EVENT_TOPIC, padAddress(USER_A)],
-            data: abiEncodeStatic([
-              0n,
-              BigInt(
-                "0xc1000000000000000000000000000000000000000000000000000000000001",
-              ),
-            ]),
+            topics: [COMMISSION_RATE_EDITED_TOPIC, padAddress(OPERATOR)],
+            data: abiEncodeStatic([500n]),
             logIndex: "0x2",
           },
           {
             transactionHash: TX.b6f,
             blockNumber: "0x6",
             address: GOLD,
-            topics: [GOLD_CHECKPOINT_EVENT_TOPIC],
-            data: abiEncodeStatic([
-              BigInt(
-                "0xc2000000000000000000000000000000000000000000000000000000000001",
-              ),
-              BigInt(
-                "0xc3000000000000000000000000000000000000000000000000000000000001",
-              ),
-            ]),
+            topics: [PROPOSAL_CREATED_TOPIC],
+            data: encodeProposalCreated(PROPOSAL_ID, USER_A),
             logIndex: "0x3",
+          },
+          {
+            transactionHash: TX.b6f,
+            blockNumber: "0x6",
+            address: GOLD,
+            topics: [COMMITMENT_PLANTED_TOPIC, "0x0000000000000000000000000000000000000000000000000000000000000001"],
+            data: abiEncodeStatic([1n, 1n]),
+            logIndex: "0x4",
           },
         ],
       },
@@ -429,13 +543,7 @@ const blockDefs = [
       {
         hash: TX.b8a,
         logs: [
-          bridgeLog(
-            TX.b8a,
-            8,
-            0,
-            CORR.pending,
-            encodeBridge(0, 2, 0, 1, true, 500n, 500n, ROOT.pending, CHILD.pending),
-          ),
+          migrationMintLog(TX.b8a, 8, 0, USER_A, 1n, 500n, CORR.pending),
         ],
       },
       {

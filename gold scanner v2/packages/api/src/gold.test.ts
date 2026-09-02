@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
-import { XAUT_SCALE } from "../../indexer/src/gold-topics.js";
+import { correlationFromAddress, XAUT_SCALE } from "../../indexer/src/gold-topics.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import {
   createGoldRouteRegistry,
@@ -21,8 +21,12 @@ import {
 const CONFIRMATION_DEPTH = "2";
 
 const CORR = {
-  redeem: "0xc000000000000000000000000000000000000000000000000000000000000004",
-  pending: "0xc000000000000000000000000000000000000000000000000000000000000005",
+  redeem: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000004",
+  ),
+  pending: correlationFromAddress(
+    "0x000000000000000000000000c0000000000000000000000000000000000005",
+  ),
 };
 
 async function indexWave3(client: pg.PoolClient): Promise<void> {
@@ -76,13 +80,12 @@ describe("gold api", () => {
 
       assert.equal(solvency.paxg.goldTokenId, "1");
       assert.equal(solvency.xaut.goldTokenId, "2");
-      assert.equal(solvency.paxg.lockedOnEthereum, solvency.paxg.goldSupply);
+      assert.equal(solvency.paxg.lockedOnEthereum, "850");
+      assert.equal(solvency.paxg.goldSupply, "1150");
       assert.equal(
         BigInt(solvency.xaut.lockedOnEthereum),
         BigInt(solvency.xaut.goldSupply) * XAUT_SCALE,
       );
-      assert.equal(solvency.paxg.lockedOnEthereum, "1150");
-      assert.equal(solvency.paxg.goldSupply, "1150");
       assert.equal(solvency.xaut.lockedOnEthereum, "12000000000000");
       assert.equal(solvency.xaut.goldSupply, "12");
       assert.notEqual(solvency.paxg.goldSupply, solvency.xaut.goldSupply);
@@ -233,7 +236,7 @@ describe("gold api", () => {
         items: Array<{ eventType: string; complete: boolean }>;
       };
       assert.equal(validatorBody.items.length, 1);
-      assert.equal(validatorBody.items[0]?.eventType, "slashed");
+      assert.equal(validatorBody.items[0]?.eventType, "created");
       assert.equal(validatorBody.items[0]?.complete, true);
 
       const delegation = await dispatchGoldGet(registry, pool, "/gold/delegation");
