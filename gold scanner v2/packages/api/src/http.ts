@@ -1,12 +1,15 @@
 import http from "node:http";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { handleContractCall } from "./contract-call.js";
 import { handleContractEncode } from "./contract-encode.js";
 import { createEvmHandler } from "./evm/register.js";
 import { createGoldRouteRegistry, registerGoldRoutes, sendJsonResponse } from "./gold/register.js";
 import { ValidationError, isOversizedQuery } from "./validate.js";
 import { handleVerify } from "./verify.js";
+import { indexWithFeed } from "./index-with-feed.js";
 import { createWebSocketFeed, type WebSocketFeed } from "./ws.js";
+import type { IndexerState } from "../../indexer/src/indexer.js";
+import type { RpcClient } from "../../indexer/src/rpc/types.js";
 
 export interface AppOptions {
   pool: Pool;
@@ -17,6 +20,11 @@ export interface AppOptions {
 export interface GoldScanApp {
   server: http.Server;
   feed: WebSocketFeed;
+  indexWithFeed: (
+    rpc: RpcClient,
+    client: PoolClient,
+    state: IndexerState,
+  ) => Promise<number>;
 }
 
 async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
@@ -187,7 +195,11 @@ export function createApp(options: AppOptions): GoldScanApp {
   const feed = createWebSocketFeed();
   feed.attach(server, options.wsPath);
 
-  return { server, feed };
+  return {
+    server,
+    feed,
+    indexWithFeed: (rpc, client, state) => indexWithFeed(rpc, client, state, feed),
+  };
 }
 
 export function listen(

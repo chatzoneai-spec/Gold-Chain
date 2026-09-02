@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import solc from "solc";
-import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
+import { createIndexerState } from "../../indexer/src/indexer.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import { handleContractCallWithRpc } from "./contract-call.js";
 import { createApp } from "./http.js";
+import { indexWithFeed } from "./index-with-feed.js";
+import type { WebSocketFeed } from "./ws.js";
 import {
   createGoldRouteRegistry,
   dispatchGoldGet,
@@ -60,16 +62,16 @@ function compileTiny(): { bytecode: string; abi: string } {
   };
 }
 
-async function indexWave3(client: pg.PoolClient): Promise<void> {
+async function indexWave3(client: pg.PoolClient, feed: WebSocketFeed): Promise<void> {
   const rpc = new FixtureRpcClient("wave3.json");
   const state = createIndexerState();
-  await indexToHead(rpc, client, state);
+  await indexWithFeed(rpc, client, state, feed);
 }
 
-async function indexWave8(client: pg.PoolClient): Promise<void> {
+async function indexWave8(client: pg.PoolClient, feed: WebSocketFeed): Promise<void> {
   const rpc = new FixtureRpcClient("wave8.json");
   const state = createIndexerState();
-  await indexToHead(rpc, client, state);
+  await indexWithFeed(rpc, client, state, feed);
 }
 
 async function apiGet(
@@ -236,7 +238,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave3(client);
+      await indexWave3(client, app.feed);
     });
 
     const { body } = await apiGet(port, {
@@ -265,7 +267,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave3(client);
+      await indexWave3(client, app.feed);
     });
 
     const id1 = await apiGet(port, {
@@ -308,7 +310,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave8(client);
+      await indexWave8(client, app.feed);
     });
 
     const response = await dispatchGoldGet(registry, pool, "/gold/validator-set");
@@ -344,7 +346,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave8(client);
+      await indexWave8(client, app.feed);
     });
 
     const response = await dispatchGoldGet(registry, pool, "/gold/delegations");
@@ -377,7 +379,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave8(client);
+      await indexWave8(client, app.feed);
     });
 
     const response = await dispatchGoldGet(registry, pool, "/gold/checkpoint-status");
@@ -402,7 +404,7 @@ describe("wave9 api", () => {
                 logs, receipts, transactions, token_contracts, contracts, addresses, blocks
          RESTART IDENTITY CASCADE`,
       );
-      await indexWave8(client);
+      await indexWave8(client, app.feed);
     });
 
     const response = await dispatchGoldGet(registry, pool, "/gold/governance-board");

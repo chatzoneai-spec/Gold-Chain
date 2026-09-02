@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
-import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
+import { createIndexerState } from "../../indexer/src/indexer.js";
 import { correlationFromAddress, XAUT_SCALE } from "../../indexer/src/gold-topics.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import {
@@ -11,6 +11,8 @@ import {
 } from "./gold/register.js";
 import { computeSolvency } from "./gold/solvency.js";
 import type { SolvencyResult } from "./gold/types.js";
+import { indexWithFeed } from "./index-with-feed.js";
+import { createWebSocketFeed, type WebSocketFeed } from "./ws.js";
 import {
   DATABASE_URL,
   migrate,
@@ -29,10 +31,10 @@ const CORR = {
   ),
 };
 
-async function indexWave3(client: pg.PoolClient): Promise<void> {
+async function indexWave3(client: pg.PoolClient, feed: WebSocketFeed): Promise<void> {
   const rpc = new FixtureRpcClient("wave3.json");
   const state = createIndexerState();
-  await indexToHead(rpc, client, state);
+  await indexWithFeed(rpc, client, state, feed);
 }
 
 function createTestPool(): pg.Pool {
@@ -51,6 +53,7 @@ async function clearIndexedData(client: pg.PoolClient): Promise<void> {
 describe("gold api", () => {
   let pool: pg.Pool;
   let registry: ReturnType<typeof createGoldRouteRegistry>;
+  let feed: WebSocketFeed;
 
   before(async () => {
     await resetDatabase();
@@ -58,6 +61,7 @@ describe("gold api", () => {
     pool = createTestPool();
     registry = createGoldRouteRegistry();
     registerGoldRoutes(registry, pool);
+    feed = createWebSocketFeed();
   });
 
   after(async () => {
@@ -74,7 +78,7 @@ describe("gold api", () => {
 
   it("solvency ignores pending and reverted rows; per-ID never collapsed", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const solvency = await computeSolvency(client);
 
@@ -109,7 +113,7 @@ describe("gold api", () => {
 
   it("redemption receipts link burned_or_debited to released on correlation id with route_asset", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const response = await dispatchGoldGet(
         registry,
@@ -141,7 +145,7 @@ describe("gold api", () => {
 
   it("bridge activity separates finalized and pending; pending never marked complete", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const response = await dispatchGoldGet(registry, pool, "/gold/bridge-activity");
       assert.equal(response.status, 200);
@@ -219,7 +223,7 @@ describe("gold api", () => {
 
   it("staking validators delegation checkpoints and governance return finalized rows", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const staking = await dispatchGoldGet(registry, pool, "/gold/staking");
       assert.equal(staking.status, 200);

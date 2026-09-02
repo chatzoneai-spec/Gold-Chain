@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import pg from "pg";
 import { correlationFromAddress, XAUT_SCALE } from "../../indexer/src/gold-topics.js";
-import { createIndexerState, indexToHead } from "../../indexer/src/indexer.js";
+import { createIndexerState } from "../../indexer/src/indexer.js";
 import { FixtureRpcClient } from "../../indexer/src/rpc/fixture-client.js";
 import { computeSolvency } from "./gold/solvency.js";
+import { indexWithFeed } from "./index-with-feed.js";
+import { createWebSocketFeed, type WebSocketFeed } from "./ws.js";
 import {
   migrate,
   resetDatabase,
@@ -19,10 +21,10 @@ const CORR = {
   ),
 };
 
-async function indexWave3(client: pg.PoolClient): Promise<void> {
+async function indexWave3(client: pg.PoolClient, feed: WebSocketFeed): Promise<void> {
   const rpc = new FixtureRpcClient("wave3.json");
   const state = createIndexerState();
-  await indexToHead(rpc, client, state);
+  await indexWithFeed(rpc, client, state, feed);
 }
 
 async function clearIndexedData(client: pg.PoolClient): Promise<void> {
@@ -35,9 +37,12 @@ async function clearIndexedData(client: pg.PoolClient): Promise<void> {
 }
 
 describe("solvency invariants", () => {
+  let feed: WebSocketFeed;
+
   before(async () => {
     await resetDatabase();
     migrate("up");
+    feed = createWebSocketFeed();
   });
 
   after(async () => {
@@ -54,7 +59,7 @@ describe("solvency invariants", () => {
 
   it("computeSolvency ignores pending deposits and reverted locks", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const solvency = await computeSolvency(client);
 
@@ -88,7 +93,7 @@ describe("solvency invariants", () => {
 
   it("GOLD ID 1 supply matches locked PAXG and ID 2 matches locked XAUT", async () => {
     await withPoolClient(async (client) => {
-      await indexWave3(client);
+      await indexWave3(client, feed);
 
       const solvency = await computeSolvency(client);
 
