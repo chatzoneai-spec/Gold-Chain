@@ -13,7 +13,11 @@ contract NativeDeploySystemTest is Test, DeploySystem {
     }
 
     function test_native_deploy_has_no_stake_manager_or_validator_share() public view {
-        assertEq(registry.getStakeManagerAddress(), address(0), "stakeManager must not be deployed");
+        assertEq(
+            registry.contractMap(keccak256(abi.encodePacked("stakeManager"))),
+            address(0),
+            "stakeManager must not be deployed"
+        );
         assertEq(registry.getValidatorShareAddress(), address(0), "validatorShare must not be deployed");
     }
 

@@ -7,7 +7,6 @@ contract Registry is Governable {
     // @todo hardcode constants
     bytes32 private constant WETH_TOKEN = keccak256("wethToken");
     bytes32 private constant DEPOSIT_MANAGER = keccak256("depositManager");
-    bytes32 private constant STAKE_MANAGER = keccak256("stakeManager");
     bytes32 private constant VALIDATOR_SHARE = keccak256("validatorShare");
     bytes32 private constant WITHDRAW_MANAGER = keccak256("withdrawManager");
     bytes32 private constant CHILD_CHAIN = keccak256("childChain");
@@ -98,10 +97,6 @@ contract Registry is Governable {
 
     function getDepositManagerAddress() public view returns (address) {
         return contractMap[DEPOSIT_MANAGER];
-    }
-
-    function getStakeManagerAddress() public view returns (address) {
-        return contractMap[STAKE_MANAGER];
     }
 
     function getSlashingManagerAddress() public view returns (address) {
