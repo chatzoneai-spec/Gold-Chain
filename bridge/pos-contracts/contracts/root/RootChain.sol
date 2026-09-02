@@ -1,11 +1,12 @@
 pragma solidity ^0.5.2;
 
 import {SafeMath} from "../common/oz/math/SafeMath.sol";
+import {ECVerify} from "../common/lib/ECVerify.sol";
 
 import {RootChainStorage} from "./RootChainStorage.sol";
 
-import {IStakeManager} from "../staking/stakeManager/IStakeManager.sol";
 import {IRootChain} from "./IRootChain.sol";
+import {IValidatorSetCommitment} from "../staking/IValidatorSetCommitment.sol";
 
 contract RootChain is RootChainStorage, IRootChain {
     using SafeMath for uint256;
@@ -16,42 +17,52 @@ contract RootChain is RootChainStorage, IRootChain {
     }
 
     function submitCheckpoint(bytes calldata data, uint256[3][] calldata sigs) external {
-        (address proposer, uint256 start, uint256 end, bytes32 rootHash, bytes32 accountHash, uint256 _giltChainID) =
+        (address proposer, uint256 start, uint256 end, bytes32 rootHash,, uint256 _giltChainID) =
             abi.decode(data, (address, uint256, uint256, bytes32, bytes32, uint256));
         require(CHAINID == _giltChainID, "Invalid gilt chain id");
-
         require(_buildHeaderBlock(proposer, start, end, rootHash), "INCORRECT_HEADER_DATA");
 
-        // check if it is better to keep it in local storage instead
-        IStakeManager stakeManager = IStakeManager(registry.getStakeManagerAddress());
-        uint256 _reward = stakeManager.checkSignatures(
-            end.sub(start).add(1),
-            /**
-             * prefix 01 to data
-             *             01 represents positive vote on data and 00 is negative vote
-             *             malicious validator can try to send 2/3 on negative vote so 01 is appended
-             */
-            keccak256(abi.encodePacked(bytes(hex"01"), data)),
-            accountHash,
-            proposer,
-            sigs
-        );
+        address commitmentAddr = registry.contractMap(keccak256("validatorSetCommitment"));
+        require(commitmentAddr != address(0), "no commitment");
 
-        require(_reward != 0, "Invalid checkpoint");
-        emit NewHeaderBlock(proposer, _nextHeaderBlock, _reward, start, end, rootHash);
+        uint256 signedPower;
+        {
+            bytes32 voteHash = keccak256(abi.encodePacked(bytes(hex"01"), data));
+            address lastAdd;
+            for (uint256 i = 0; i < sigs.length; ++i) {
+                address signer = ECVerify.ecrecovery(
+                    voteHash, uint8(sigs[i][0]), bytes32(sigs[i][1]), bytes32(sigs[i][2])
+                );
+
+                if (signer == lastAdd) {
+                    continue;
+                }
+
+                require(signer > lastAdd, "signatures not sorted ascending");
+
+                if (!IValidatorSetCommitment(commitmentAddr).isActiveSigner(signer)) {
+                    continue;
+                }
+
+                lastAdd = signer;
+                signedPower = signedPower.add(IValidatorSetCommitment(commitmentAddr).getSignerPower(signer));
+            }
+        }
+
+        uint256 committedTotalPower = IValidatorSetCommitment(commitmentAddr).totalPower();
+        require(committedTotalPower > 0, "empty committed set");
+        require(signedPower >= committedTotalPower.mul(2).div(3).add(1), "2/3+1 non-majority");
+        require(signedPower != 0, "Invalid checkpoint");
+
+        emit NewHeaderBlock(proposer, _nextHeaderBlock, signedPower, start, end, rootHash);
         _nextHeaderBlock = _nextHeaderBlock.add(MAX_DEPOSITS);
         _blockDepositId = 1;
     }
 
     function updateDepositId(uint256 numDeposits) external onlyDepositManager returns (uint256 depositId) {
         depositId = currentHeaderBlock().add(_blockDepositId);
-        // deposit ids will be (_blockDepositId, _blockDepositId + 1, .... _blockDepositId + numDeposits - 1)
         _blockDepositId = _blockDepositId.add(numDeposits);
-        require(
-            // Since _blockDepositId is initialized to 1; only (MAX_DEPOSITS - 1) deposits per header block are allowed
-            _blockDepositId <= MAX_DEPOSITS,
-            "TOO_MANY_DEPOSITS"
-        );
+        require(_blockDepositId <= MAX_DEPOSITS, "TOO_MANY_DEPOSITS");
     }
 
     function getLastChildBlock() external view returns (uint256) {
@@ -64,11 +75,6 @@ contract RootChain is RootChainStorage, IRootChain {
 
     function _buildHeaderBlock(address proposer, uint256 start, uint256 end, bytes32 rootHash) private returns (bool) {
         uint256 nextChildBlock;
-        /*
-    The ID of the 1st header block is MAX_DEPOSITS.
-        if _nextHeaderBlock == MAX_DEPOSITS, then the first header block is yet to be submitted, hence nextChildBlock =
-        0
-        */
         if (_nextHeaderBlock > MAX_DEPOSITS) {
             nextChildBlock = headerBlocks[currentHeaderBlock()].end + 1;
         }
@@ -76,15 +82,15 @@ contract RootChain is RootChainStorage, IRootChain {
             return false;
         }
 
-        HeaderBlock memory headerBlock =
-            HeaderBlock({root: rootHash, start: nextChildBlock, end: end, createdAt: now, proposer: proposer});
+        HeaderBlock memory headerBlock = HeaderBlock({
+            root: rootHash,
+            start: start,
+            end: end,
+            createdAt: block.timestamp,
+            proposer: proposer
+        });
 
         headerBlocks[_nextHeaderBlock] = headerBlock;
         return true;
-    }
-
-    // Housekeeping function. @todo remove later
-    function setGiltConsensusId(string memory _giltconsensusId) public onlyOwner {
-        giltconsensusId = keccak256(abi.encodePacked(_giltconsensusId));
     }
 }

@@ -10,9 +10,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         address operatorAddress,
         bool delegateVotePower
     ) external payable onlyStakeHubDelegateCall whenNotPaused notInBlackList validatorExist(operatorAddress) {
-        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(operatorAddress);
-        _requireGiltCutoverNotFlipped(operatorAddress);
 
         uint256 giltAmount = msg.value;
         if (giltAmount < minDelegationGILTChange) revert DelegationAmountTooSmall();
@@ -23,7 +21,6 @@ contract StakeHubGiltStaking is StakeHubCommon {
 
         uint256 shares = IStakeCredit(valInfo.creditContract).delegate{ value: giltAmount }(delegator);
         emit Delegated(operatorAddress, delegator, shares, giltAmount);
-        _trackGiltDelegator(operatorAddress, delegator);
 
         IGovToken(GOV_TOKEN_ADDR).sync(valInfo.creditContract, delegator);
         if (delegateVotePower) {
@@ -35,9 +32,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         address operatorAddress,
         uint256 shares
     ) external onlyStakeHubDelegateCall whenNotPaused notInBlackList validatorExist(operatorAddress) {
-        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(operatorAddress);
-        _requireGiltCutoverNotFlipped(operatorAddress);
 
         if (shares == 0) revert ZeroShares();
 
@@ -46,7 +41,6 @@ contract StakeHubGiltStaking is StakeHubCommon {
 
         uint256 giltAmount = IStakeCredit(valInfo.creditContract).undelegate(delegator, shares);
         emit Undelegated(operatorAddress, delegator, shares, giltAmount);
-        _trackGiltDelegator(operatorAddress, delegator);
 
         if (delegator == operatorAddress) {
             _checkValidatorSelfDelegation(operatorAddress);
@@ -69,11 +63,8 @@ contract StakeHubGiltStaking is StakeHubCommon {
         validatorExist(dstValidator)
         enableReceivingFund
     {
-        _requireNativeGiltWritesRetired();
         _requireGiltStakeUnfrozen(srcValidator);
-        _requireGiltCutoverNotFlipped(srcValidator);
         _requireGiltStakeUnfrozen(dstValidator);
-        _requireGiltCutoverNotFlipped(dstValidator);
 
         if (shares == 0) revert ZeroShares();
         if (srcValidator == dstValidator) revert SameValidator();
@@ -100,8 +91,6 @@ contract StakeHubGiltStaking is StakeHubCommon {
         giltAmount -= feeCharge;
         uint256 newShares = IStakeCredit(dstValInfo.creditContract).delegate{ value: giltAmount }(delegator);
         emit Redelegated(srcValidator, dstValidator, delegator, shares, newShares, giltAmount);
-        _trackGiltDelegator(srcValidator, delegator);
-        _trackGiltDelegator(dstValidator, delegator);
 
         address[] memory stakeCredits = new address[](2);
         stakeCredits[0] = srcValInfo.creditContract;
@@ -133,10 +122,7 @@ contract StakeHubGiltStaking is StakeHubCommon {
         address operatorAddress,
         uint256 requestNumber
     ) internal validatorExist(operatorAddress) {
-        _requireGiltCutoverNotFlipped(operatorAddress);
-
         uint256 giltAmount = IStakeCredit(_validators[operatorAddress].creditContract).claim(msg.sender, requestNumber);
         emit Claimed(operatorAddress, msg.sender, giltAmount);
-        _trackGiltDelegator(operatorAddress, msg.sender);
     }
 }

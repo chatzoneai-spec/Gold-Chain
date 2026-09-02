@@ -45,7 +45,6 @@ contract StakeHubValidators is StakeHubCommon {
         Commission calldata commission,
         Description calldata description
     ) external payable onlyStakeHubDelegateCall whenNotPaused notInBlackList {
-        _requireNativeGiltWritesRetired();
         if (giltStakeFreezeEnabled) revert GiltStakeFrozen();
 
         // basic check
@@ -94,7 +93,6 @@ contract StakeHubValidators is StakeHubCommon {
         emit ValidatorCreated(consensusAddress, operatorAddress, creditContract, voteAddress);
         emit Delegated(operatorAddress, operatorAddress, delegation, delegation);
         emit Delegated(operatorAddress, DEAD_ADDRESS, LOCK_AMOUNT, LOCK_AMOUNT);
-        _trackGiltDelegator(operatorAddress, operatorAddress);
 
         IGovToken(GOV_TOKEN_ADDR).sync(creditContract, operatorAddress);
     }

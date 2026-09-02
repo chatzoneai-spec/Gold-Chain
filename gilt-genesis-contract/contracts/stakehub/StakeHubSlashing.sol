@@ -174,40 +174,9 @@ contract StakeHubSlashing is StakeHubCommon {
         bytes32 evidenceRef,
         uint256 jailUntil
     ) internal returns (uint256 giltSlashAmount) {
-        if (rootAnchoredGiltStakingEnabled && giltCutoverFlipped[operatorAddress]) {
-            uint256 rootValidatorId = _rootValidatorIdBySigner[consensusAddress];
-            if (rootValidatorId == 0) revert InvalidRequest();
-            emit RootSlashIntent(
-                rootValidatorId,
-                consensusAddress,
-                _rootSlashTypeCode(slashType),
-                evidenceRef,
-                block.number
-            );
-            _jailValidator(valInfo, jailUntil);
-            return 0;
-        }
-
-        if (rootAnchoredGiltStakingEnabled) {
-            _jailValidator(valInfo, jailUntil);
-            return 0;
-        }
-
         giltSlashAmount = _slashWithTokenBFirst(operatorAddress, valInfo.creditContract, slashAmount, slashType);
         _jailValidator(valInfo, jailUntil);
         return giltSlashAmount;
-    }
-
-    function _rootSlashTypeCode(
-        SlashType slashType
-    ) internal pure returns (uint8) {
-        if (slashType == SlashType.DownTime) {
-            return 0;
-        }
-        if (slashType == SlashType.DoubleSign) {
-            return 1;
-        }
-        return 2;
     }
 
     function _slashWithTokenBFirst(

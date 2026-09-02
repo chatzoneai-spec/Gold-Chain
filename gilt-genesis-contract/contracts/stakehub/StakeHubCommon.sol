@@ -14,10 +14,6 @@ import "./StakeHubStorage.sol";
 abstract contract StakeHubCommon is StakeHubStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint8 internal constant ROOT_STAKE_STATUS_ACTIVE = 0;
-    uint8 internal constant ROOT_STAKE_STATUS_JAILED = 1;
-    uint8 internal constant ROOT_STAKE_STATUS_UNSTAKED = 2;
-
     function _checkValidatorSelfDelegation(
         address operatorAddress
     ) internal {
@@ -364,105 +360,21 @@ abstract contract StakeHubCommon is StakeHubStorage {
     }
 
     function _electionStakeA(
-        address operatorAddress,
-        address consensusAddress,
+        address,
+        address,
         address creditContract
     ) internal view returns (uint256) {
-        if (rootAnchoredGiltStakingEnabled) {
-            if (!giltCutoverFlipped[operatorAddress]) {
-                return 0;
-            }
-            return _rootAnchoredStakeAmount(consensusAddress);
-        }
-        if (giltCutoverFlipped[operatorAddress]) {
-            return _rootAnchoredStakeAmount(consensusAddress);
-        }
-        if (giltStakeFreezeEnabled && giltCutoverSnapshotBlock != 0) {
+        if (giltStakeFreezeEnabled) {
             return 0;
         }
         return IStakeCredit(creditContract).totalPooledGILT();
     }
 
-    function _rootAnchoredStakeAmount(
-        address consensusAddress
-    ) internal view returns (uint256) {
-        uint256 validatorId = _rootValidatorIdBySigner[consensusAddress];
-        if (validatorId == 0) {
-            return 0;
-        }
-        RootStakeRecord storage rec = _rootStakeByValidatorId[validatorId];
-        if (rec.status != ROOT_STAKE_STATUS_ACTIVE) {
-            return 0;
-        }
-        return rec.amount;
-    }
-
-    function _adjustRootStakeTotal(
-        uint256 previousAmount,
-        uint8 previousStatus,
-        uint256 newAmount,
-        uint8 newStatus
-    ) internal {
-        if (previousStatus == ROOT_STAKE_STATUS_ACTIVE) {
-            rootStakeSnapshotTotal -= previousAmount;
-        }
-        if (newStatus == ROOT_STAKE_STATUS_ACTIVE) {
-            rootStakeSnapshotTotal += newAmount;
-        }
-    }
-
-    function _checkRootStakeDivergence(
-        address reporter
-    ) internal {
-        uint256 trackedTotal;
-        uint256 validatorCount = _validatorSet.length();
-        for (uint256 i; i < validatorCount; ++i) {
-            address operatorAddress = _validatorSet.at(i);
-            if (!giltCutoverFlipped[operatorAddress]) {
-                continue;
-            }
-            address consensusAddress = _validators[operatorAddress].consensusAddress;
-            trackedTotal += _rootAnchoredStakeAmount(consensusAddress);
-        }
-        if (trackedTotal != rootStakeSnapshotTotal) {
-            emit RootStakeDivergenceDetected(rootStakeSnapshotTotal, trackedTotal, reporter);
-            IGiltValidatorSet(VALIDATOR_CONTRACT_ADDR).activateConsensusEmergencyHalt(reporter);
-        }
-    }
-
-    function _trackGiltDelegator(
-        address operatorAddress,
-        address delegator
-    ) internal {
-        if (delegator == DEAD_ADDRESS) {
-            return;
-        }
-        if (IStakeCredit(_validators[operatorAddress].creditContract).balanceOf(delegator) > 0) {
-            _giltDelegators[operatorAddress].add(delegator);
-        } else {
-            _giltDelegators[operatorAddress].remove(delegator);
-        }
-    }
-
-    function _requireNativeGiltWritesRetired() internal view {
-        if (rootAnchoredGiltStakingEnabled) {
-            revert NativeGiltWritesRetired();
-        }
-    }
-
     function _requireGiltStakeUnfrozen(
-        address operatorAddress
+        address
     ) internal view {
-        if (giltStakeFreezeEnabled && !giltCutoverFlipped[operatorAddress]) {
+        if (giltStakeFreezeEnabled) {
             revert GiltStakeFrozen();
-        }
-    }
-
-    function _requireGiltCutoverNotFlipped(
-        address operatorAddress
-    ) internal view {
-        if (giltCutoverFlipped[operatorAddress]) {
-            revert GiltCutoverAlreadyFlipped();
         }
     }
 

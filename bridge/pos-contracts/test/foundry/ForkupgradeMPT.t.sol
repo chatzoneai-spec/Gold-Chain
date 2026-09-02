@@ -31,6 +31,8 @@ struct FileObject {
 contract ForkupgradeMPT is Test {
     using stdJson for string;
 
+    event ExitStarted(address indexed exitor, uint256 indexed exitId, address indexed token, uint256 amount, bool isERC721);
+
     WithdrawManager withdrawManager;
 
     uint256 mainnetFork;
@@ -82,7 +84,7 @@ contract ForkupgradeMPT is Test {
 
             // Expect the exit correctly happens, this is the last thing that happens in an orderly exit
             vm.expectEmit(true, false, false, false, address(withdrawManager));
-            emit WithdrawManager.ExitStarted(obj.from, index, address(0), 0, true);
+            emit ExitStarted(obj.from, index, address(0), 0, true);
             // Pretend to be the the exitor and replay tx
             vm.prank(obj.from);
             (bool successSchedule, bytes memory dataSchedule) =

@@ -32,8 +32,6 @@ contract Deployer is Test {
     address public constant STAKE_HUB_MIGRATION_MODULE_ADDR = 0x0000000000000000000000000000000000002016;
     address public constant STAKE_HUB_PARAMS_MODULE_ADDR = 0x0000000000000000000000000000000000002017;
     address public constant STAKE_HUB_VALIDATOR_VIEWS_MODULE_ADDR = 0x0000000000000000000000000000000000002018;
-    address public constant STAKE_HUB_ROOT_STAKE_MODULE_ADDR = 0x0000000000000000000000000000000000002019;
-    address public constant STAKE_HUB_GILT_CUTOVER_MODULE_ADDR = 0x000000000000000000000000000000000000201A;
     address public constant STATE_RECEIVER_ADDR = 0x0000000000000000000000000000000000003001;
     address payable public constant STAKE_CREDIT_ADDR = payable(0x0000000000000000000000000000000000002003);
     address payable public constant GOVERNOR_ADDR = payable(0x0000000000000000000000000000000000002004);
@@ -143,10 +141,6 @@ contract Deployer is Test {
         vm.etch(STAKE_HUB_PARAMS_MODULE_ADDR, deployedCode);
         deployedCode = vm.getDeployedCode("StakeHubValidatorViews.sol:StakeHubValidatorViews");
         vm.etch(STAKE_HUB_VALIDATOR_VIEWS_MODULE_ADDR, deployedCode);
-        deployedCode = vm.getDeployedCode("StakeHubRootStake.sol:StakeHubRootStake");
-        vm.etch(STAKE_HUB_ROOT_STAKE_MODULE_ADDR, deployedCode);
-        deployedCode = vm.getDeployedCode("StakeHubGiltCutover.sol:StakeHubGiltCutover");
-        vm.etch(STAKE_HUB_GILT_CUTOVER_MODULE_ADDR, deployedCode);
         deployedCode = vm.getDeployedCode("StakeCredit.sol:StakeCredit");
         vm.etch(STAKE_CREDIT_ADDR, deployedCode);
         deployedCode = vm.getDeployedCode("GiltGovernor.sol:GiltGovernor");

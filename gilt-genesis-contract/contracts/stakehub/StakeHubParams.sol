@@ -209,10 +209,6 @@ contract StakeHubParams is StakeHubCommon {
             tokenBRewardSplitBps = newTokenBRewardSplitBps;
             return true;
         }
-        if (key.compareStrings("rootAnchoredGiltStakingEnabled")) {
-            rootAnchoredGiltStakingEnabled = _boolParam(key, value);
-            return true;
-        }
         if (key.compareStrings("giltStakeFreezeEnabled")) {
             bool enabled = _boolParam(key, value);
             giltStakeFreezeEnabled = enabled;
