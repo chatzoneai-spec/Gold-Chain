@@ -1,4 +1,4 @@
-pragma solidity ^0.5.2;
+pragma solidity 0.5.17;
 
 pragma experimental ABIEncoderV2;
 
@@ -32,7 +32,7 @@ interface IValidatorSetCommitment {
         address[] calldata consensusAddresses,
         bytes[] calldata voteKeys,
         uint256[] calldata votingPowers,
-        bytes calldata encodedSigs
+        uint256[3][] calldata sigs
     ) external;
 
     function emergencyEject(EmergencyEvidence calldata evidence) external;
@@ -48,9 +48,4 @@ interface IValidatorSetCommitment {
     function isActiveSigner(address consensusAddress) external view returns (bool);
 
     function getVoteKey(address consensusAddress) external view returns (bytes memory);
-
-    function verifyCheckpointSignatures(bytes32 voteHash, uint256[3][] calldata sigs)
-        external
-        view
-        returns (uint256 signedPower);
 }

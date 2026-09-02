@@ -1,6 +1,7 @@
 pragma solidity ^0.5.2;
 
 import {SafeMath} from "../common/oz/math/SafeMath.sol";
+import {ECVerify} from "../common/lib/ECVerify.sol";
 
 import {RootChainStorage} from "./RootChainStorage.sol";
 
@@ -19,18 +20,41 @@ contract RootChain is RootChainStorage, IRootChain {
         (address proposer, uint256 start, uint256 end, bytes32 rootHash,, uint256 _giltChainID) =
             abi.decode(data, (address, uint256, uint256, bytes32, bytes32, uint256));
         require(CHAINID == _giltChainID, "Invalid gilt chain id");
-
         require(_buildHeaderBlock(proposer, start, end, rootHash), "INCORRECT_HEADER_DATA");
 
         address commitmentAddr = registry.contractMap(keccak256("validatorSetCommitment"));
         require(commitmentAddr != address(0), "no commitment");
-        uint256 _reward = IValidatorSetCommitment(commitmentAddr).verifyCheckpointSignatures(
-            keccak256(abi.encodePacked(bytes(hex"01"), data)),
-            sigs
-        );
 
-        require(_reward != 0, "Invalid checkpoint");
-        emit NewHeaderBlock(proposer, _nextHeaderBlock, _reward, start, end, rootHash);
+        uint256 signedPower;
+        {
+            bytes32 voteHash = keccak256(abi.encodePacked(bytes(hex"01"), data));
+            address lastAdd;
+            for (uint256 i = 0; i < sigs.length; ++i) {
+                address signer = ECVerify.ecrecovery(
+                    voteHash, uint8(sigs[i][0]), bytes32(sigs[i][1]), bytes32(sigs[i][2])
+                );
+
+                if (signer == lastAdd) {
+                    continue;
+                }
+
+                require(signer > lastAdd, "signatures not sorted ascending");
+
+                if (!IValidatorSetCommitment(commitmentAddr).isActiveSigner(signer)) {
+                    continue;
+                }
+
+                lastAdd = signer;
+                signedPower = signedPower.add(IValidatorSetCommitment(commitmentAddr).getSignerPower(signer));
+            }
+        }
+
+        uint256 committedTotalPower = IValidatorSetCommitment(commitmentAddr).totalPower();
+        require(committedTotalPower > 0, "empty committed set");
+        require(signedPower >= committedTotalPower.mul(2).div(3).add(1), "2/3+1 non-majority");
+        require(signedPower != 0, "Invalid checkpoint");
+
+        emit NewHeaderBlock(proposer, _nextHeaderBlock, signedPower, start, end, rootHash);
         _nextHeaderBlock = _nextHeaderBlock.add(MAX_DEPOSITS);
         _blockDepositId = 1;
     }
@@ -58,14 +82,15 @@ contract RootChain is RootChainStorage, IRootChain {
             return false;
         }
 
-        HeaderBlock memory headerBlock =
-            HeaderBlock({root: rootHash, start: nextChildBlock, end: end, createdAt: now, proposer: proposer});
+        HeaderBlock memory headerBlock = HeaderBlock({
+            root: rootHash,
+            start: start,
+            end: end,
+            createdAt: block.timestamp,
+            proposer: proposer
+        });
 
         headerBlocks[_nextHeaderBlock] = headerBlock;
         return true;
-    }
-
-    function setGiltConsensusId(string memory _giltconsensusId) public onlyOwner {
-        giltconsensusId = keccak256(abi.encodePacked(_giltconsensusId));
     }
 }
