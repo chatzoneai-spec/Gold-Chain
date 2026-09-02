@@ -984,24 +984,6 @@ func (_m *IContractCaller) IsTxConfirmed(_a0 common.Hash, _a1 uint64) bool {
 	return r0
 }
 
-// SendSlashRelay provides a mock function with given fields: data, sigs, stakeManagerAddress
-func (_m *IContractCaller) SendSlashRelay(data []byte, sigs [][3]*big.Int, stakeManagerAddress common.Address) error {
-	ret := _m.Called(data, sigs, stakeManagerAddress)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SendSlashRelay")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, [][3]*big.Int, common.Address) error); ok {
-		r0 = rf(data, sigs, stakeManagerAddress)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // SendCheckpoint provides a mock function with given fields: signedData, sigs, rootChainAddress, rootChainInstance
 func (_m *IContractCaller) SendCheckpoint(signedData []byte, sigs [][3]*big.Int, rootChainAddress common.Address, rootChainInstance *rootchain.Rootchain) error {
 	ret := _m.Called(signedData, sigs, rootChainAddress, rootChainInstance)

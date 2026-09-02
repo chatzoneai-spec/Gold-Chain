@@ -9,7 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	util "github.com/giltchain/gilt-consensus/common/hex"
-	"github.com/giltchain/gilt-consensus/helper"
 	"github.com/giltchain/gilt-consensus/metrics/api"
 	hmTypes "github.com/giltchain/gilt-consensus/types"
 	"github.com/giltchain/gilt-consensus/x/stake/types"
@@ -43,17 +42,7 @@ func (srv msgServer) ValidatorJoin(ctx context.Context, msg *types.MsgValidatorJ
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorJoinMethod, startTime, &err)
 
-	if !helper.IsRootAnchoredStakeReadEnabled() {
-		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator join requires root-anchored stake")
-	}
-
-	validator, err := srv.k.JoinValidatorFromRoot(ctx, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	emitValidatorEvent(ctx, types.EventTypeValidatorJoin, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-	return &types.MsgValidatorJoinResponse{}, nil
+	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator join requires root-anchored stake")
 }
 
 // StakeUpdate sets validator GILT stake from the root-anchored source of truth.
@@ -62,17 +51,7 @@ func (srv msgServer) StakeUpdate(ctx context.Context, msg *types.MsgStakeUpdate)
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.StakeUpdateMethod, startTime, &err)
 
-	if !helper.IsRootAnchoredStakeReadEnabled() {
-		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "stake update requires root-anchored stake")
-	}
-
-	validator, err := srv.k.SetValidatorStakeFromRoot(ctx, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	emitValidatorEvent(ctx, types.EventTypeStakeUpdate, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-	return &types.MsgStakeUpdateResponse{}, nil
+	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "stake update requires root-anchored stake")
 }
 
 // SignerUpdate updates the signer key from the root-anchored source of truth.
@@ -81,17 +60,7 @@ func (srv msgServer) SignerUpdate(ctx context.Context, msg *types.MsgSignerUpdat
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.SignerUpdateMethod, startTime, &err)
 
-	if !helper.IsRootAnchoredStakeReadEnabled() {
-		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "signer update requires root-anchored stake")
-	}
-
-	validator, err := srv.k.UpdateValidatorSignerFromRoot(ctx, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	emitValidatorEvent(ctx, types.EventTypeSignerUpdate, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-	return &types.MsgSignerUpdateResponse{}, nil
+	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "signer update requires root-anchored stake")
 }
 
 // ValidatorExit exits a validator through root-anchored Gold Chain state.
@@ -100,19 +69,7 @@ func (srv msgServer) ValidatorExit(ctx context.Context, msg *types.MsgValidatorE
 	startTime := time.Now()
 	defer recordStakeTransactionMetric(api.ValidatorExitMethod, startTime, &err)
 
-	if !helper.IsRootAnchoredStakeReadEnabled() {
-		return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator exit requires root-anchored stake")
-	}
-	if msg.RootDeactivationEpoch == 0 {
-		return nil, errorsmod.Wrap(types.ErrInvalidMsg, "missing root deactivation epoch")
-	}
-	validator, err := srv.k.ExitValidatorFromRoot(ctx, msg, msg.RootDeactivationEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	emitValidatorEvent(ctx, types.EventTypeValidatorExit, validator.ValId, validator.OperatorAddress(), validator.Signer, validator.Nonce)
-	return &types.MsgValidatorExitResponse{}, nil
+	return nil, errorsmod.Wrap(types.ErrNativeStakeRetired, "validator exit requires root-anchored stake")
 }
 
 // WithdrawValidatorStake releases self-staked GILT after exit unbonding.

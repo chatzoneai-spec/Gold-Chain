@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +27,6 @@ type sideMsgServer struct {
 var (
 	checkpointTypeUrl    = sdk.MsgTypeURL(&types.MsgCheckpoint{})
 	checkpointAckTypeUrl = sdk.MsgTypeURL(&types.MsgCpAck{})
-	slashRelayTypeUrl    = sdk.MsgTypeURL(&types.MsgSlashRelay{})
 )
 
 // NewSideMsgServerImpl returns an implementation of the checkpoint sideMsgServer interface
@@ -44,8 +42,6 @@ func (srv *sideMsgServer) SideTxHandler(methodName string) sidetxs.SideTxHandler
 		return srv.SideHandleMsgCheckpoint
 	case checkpointAckTypeUrl:
 		return srv.SideHandleMsgCheckpointAck
-	case slashRelayTypeUrl:
-		return srv.SideHandleMsgSlashRelay
 	default:
 		return nil
 	}
@@ -58,8 +54,6 @@ func (srv *sideMsgServer) PostTxHandler(methodName string) sidetxs.PostTxHandler
 		return srv.PostHandleMsgCheckpoint
 	case checkpointAckTypeUrl:
 		return srv.PostHandleMsgCheckpointAck
-	case slashRelayTypeUrl:
-		return srv.PostHandleMsgSlashRelay
 	default:
 		return nil
 	}
@@ -606,117 +600,6 @@ func (srv *sideMsgServer) PostHandleMsgCheckpointAck(ctx sdk.Context, sdkMsg sdk
 			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, common.Bytes2Hex(txBytes)),   // tx hash
 			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()), // result
 			sdk.NewAttribute(types.AttributeKeyHeaderIndex, strconv.FormatUint(msg.Number, 10)),
-		),
-	})
-
-	return nil
-}
-
-// SideHandleMsgSlashRelay validates a slash relay side tx against finalized child evidence.
-func (srv *sideMsgServer) SideHandleMsgSlashRelay(ctx sdk.Context, sdkMsg sdk.Msg) sidetxs.Vote {
-	var err error
-	startTime := time.Now()
-	defer recordCheckpointMetric(api.SideHandleMsgSlashRelayMethod, api.SideType, startTime, &err)
-
-	logger := srv.Logger(ctx)
-
-	msg, ok := sdkMsg.(*types.MsgSlashRelay)
-	if !ok {
-		logger.Error(helper.ErrTypeMismatch("MsgSlashRelay"))
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	chainParams, err := srv.ck.GetParams(ctx)
-	if err != nil {
-		logger.Error(hmTypes.ErrMsgErrorInGettingChainManagerParams, hmTypes.LogKeyError, err)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	if !helper.ValidateChainID(msg.GiltChainId, chainParams.ChainParams.GiltChainId, logger, "slash-relay") {
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	validatorSet, err := srv.stakeKeeper.GetValidatorSet(ctx)
-	if err != nil {
-		logger.Error(hmTypes.ErrMsgNoProposerInValidatorSet, "msgProposer", msg.Proposer)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	if validatorSet.Proposer == nil {
-		logger.Error(hmTypes.ErrMsgNoProposerInValidatorSet, "msgProposer", msg.Proposer)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	msgProposer := util.FormatAddress(msg.Proposer)
-	valProposer := util.FormatAddress(validatorSet.Proposer.Signer)
-	if msgProposer != valProposer {
-		logger.Error(
-			hmTypes.ErrMsgInvalidProposerInMsg,
-			hmTypes.LogKeyProposer, valProposer,
-			"msgProposer", msgProposer,
-		)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	confirmations := chainParams.GiltChainTxConfirmations
-	header, err := srv.IContractCaller.GetGiltChainBlock(ctx, new(big.Int).SetUint64(msg.FinalizedHeight))
-	if err != nil || header == nil {
-		logger.Error("slash relay side handler: failed to fetch gilt chain block", "height", msg.FinalizedHeight, "error", err)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	currentHeader, err := srv.IContractCaller.GetGiltChainBlock(ctx, nil)
-	if err != nil || currentHeader == nil {
-		logger.Error("slash relay side handler: failed to fetch gilt chain head", "error", err)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	if currentHeader.Number.Uint64() < msg.FinalizedHeight+confirmations {
-		logger.Error("slash relay side handler: evidence not finalized",
-			"finalizedHeight", msg.FinalizedHeight,
-			"confirmations", confirmations,
-			"head", currentHeader.Number.Uint64(),
-		)
-		return sidetxs.Vote_VOTE_NO
-	}
-
-	return sidetxs.Vote_VOTE_YES
-}
-
-// PostHandleMsgSlashRelay emits slash relay event for bridge processors after side-tx approval.
-func (srv *sideMsgServer) PostHandleMsgSlashRelay(ctx sdk.Context, sdkMsg sdk.Msg, sideTxResult sidetxs.Vote) error {
-	var err error
-	startTime := time.Now()
-	defer recordCheckpointMetric(api.PostHandleMsgSlashRelayMethod, api.PostType, startTime, &err)
-
-	logger := srv.Logger(ctx)
-
-	msg, ok := sdkMsg.(*types.MsgSlashRelay)
-	if !ok {
-		err = errors.New(helper.ErrTypeMismatch("MsgSlashRelay"))
-		logger.Error(err.Error())
-		return err
-	}
-
-	if !helper.IsSideTxApproved(sideTxResult) {
-		logger.Debug(helper.ErrSkippingMsg("SlashRelay"))
-		return errors.New(hmTypes.ErrMsgSideTxRejected)
-	}
-
-	txBytes := ctx.TxBytes()
-
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeSlashRelay,
-			sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-			sdk.NewAttribute(hmTypes.AttributeKeyTxHash, common.Bytes2Hex(txBytes)),
-			sdk.NewAttribute(hmTypes.AttributeKeySideTxResult, sideTxResult.String()),
-			sdk.NewAttribute(types.AttributeKeyProposer, msg.Proposer),
-			sdk.NewAttribute(types.AttributeKeyValidatorID, strconv.FormatUint(msg.ValidatorId, 10)),
-			sdk.NewAttribute(types.AttributeKeySlashType, strconv.FormatUint(uint64(msg.SlashType), 10)),
-			sdk.NewAttribute(types.AttributeKeyEvidenceRef, common.Bytes2Hex(msg.EvidenceRef)),
-			sdk.NewAttribute(types.AttributeKeyFinalizedHeight, strconv.FormatUint(msg.FinalizedHeight, 10)),
-			sdk.NewAttribute(types.AttributeKeyGiltChainId, msg.GiltChainId),
 		),
 	})
 

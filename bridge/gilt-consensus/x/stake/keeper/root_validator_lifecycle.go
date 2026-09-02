@@ -13,15 +13,11 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	util "github.com/giltchain/gilt-consensus/common/hex"
-	"github.com/giltchain/gilt-consensus/helper"
 	"github.com/giltchain/gilt-consensus/x/stake/types"
 )
 
 func (k *Keeper) ensureRootAnchoredStakeReadEnabled() error {
-	if !helper.IsRootAnchoredStakeReadEnabled() {
-		return errorsmod.Wrap(types.ErrInvalidMsg, "root-anchored stake read path is disabled; validator set frozen at last-known-good")
-	}
-	return nil
+	return errorsmod.Wrap(types.ErrNativeStakeRetired, "root-anchored stake read path is retired")
 }
 
 func (k *Keeper) requireRootValidatorNonce(ctx context.Context, valID uint64, nonce uint64) (types.Validator, error) {

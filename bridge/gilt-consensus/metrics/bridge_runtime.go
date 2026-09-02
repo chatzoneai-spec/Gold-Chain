@@ -35,24 +35,7 @@ var (
 		},
 		[]string{"finality_policy"},
 	)
-
-	rootAnchoredStakeReadGauge = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Namespace: Namespace,
-			Subsystem: "bridge",
-			Name:      "root_anchored_stake_read_enabled",
-			Help:      "Whether finalized root StakingInfo events may update the validator set (1 enabled, 0 frozen).",
-		},
-	)
 )
-
-func SetRootAnchoredStakeReadMetrics(enabled bool) {
-	value := 0.0
-	if enabled {
-		value = 1.0
-	}
-	rootAnchoredStakeReadGauge.Set(value)
-}
 
 func SetBridgeRuntimeHealthMetrics(bridgeEnabled bool, bridgeMode, finalityPolicy string) {
 	enabled := 0.0

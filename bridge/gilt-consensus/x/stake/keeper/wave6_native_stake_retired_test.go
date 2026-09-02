@@ -2,7 +2,6 @@ package keeper_test
 
 import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 
 	"github.com/giltchain/gilt-consensus/helper"
@@ -53,7 +52,6 @@ func (s *KeeperTestSuite) TestWave6KeeperApproveValidatorCannotWritePower() {
 
 func (s *KeeperTestSuite) TestWave6NativeJoinCannotIncreaseVotingPower() {
 	ctx, msgServer, keeper, require := s.ctx, s.msgServer, s.stakeKeeper, s.Require()
-	helper.SetRootAnchoredStakeReadEnabled(false)
 	viper.Set(helper.BridgeFlag, true)
 
 	validators := s.seedNativeValidators(4)
@@ -112,30 +110,8 @@ func (s *KeeperTestSuite) TestWave6KeeperJoinValidatorCannotWritePower() {
 	require.Equal(beforeTotal, afterTotal)
 }
 
-func (s *KeeperTestSuite) TestWave6RootAnchoredJoinStillWritesPower() {
-	ctx, msgServer, keeper, require := s.ctx, s.msgServer, s.stakeKeeper, s.Require()
-
-	viper.Set(helper.BridgeFlag, true)
-	helper.SetRootAnchoredStakeReadEnabled(true)
-	s.checkpointKeeper.EXPECT().GetAckCount(gomock.Any()).AnyTimes().Return(uint64(0), nil)
-	s.seedNativeValidators(4)
-
-	operator := secp256k1.GenPrivKey().PubKey().Address().String()
-	joinPubKey := secp256k1.GenPrivKey().PubKey()
-	joinMsg, err := types.NewMsgValidatorJoin(operator, 77, 1, oneGilt, joinPubKey, 1)
-	require.NoError(err)
-
-	_, err = msgServer.ValidatorJoin(ctx, joinMsg)
-	require.NoError(err)
-
-	validator, err := keeper.GetValidatorFromValID(ctx, 77)
-	require.NoError(err)
-	require.True(validator.VotingPower > 0)
-}
-
 func (s *KeeperTestSuite) TestWave6NativeStakeUpdateRejected() {
 	ctx, msgServer, require := s.ctx, s.msgServer, s.Require()
-	helper.SetRootAnchoredStakeReadEnabled(false)
 	viper.Set(helper.BridgeFlag, true)
 
 	validators := s.seedNativeValidators(4)

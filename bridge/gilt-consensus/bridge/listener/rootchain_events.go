@@ -11,16 +11,8 @@ var supportedRootChainEvents = map[string]struct{}{
 	helper.NewHeaderBlockEvent: {},
 	helper.StateSyncedEvent:    {},
 	helper.TopUpFeeEvent:       {},
-	helper.SlashedEvent:        {},
-	helper.UnJailedEvent:       {},
-	helper.StakedEvent:         {},
-	helper.UnstakeInitEvent:    {},
-	helper.UnstakedEvent:       {},
-	helper.SignerChangeEvent:   {},
-	helper.StakeUpdateEvent:    {},
-	helper.RestakedEvent:       {},
-	helper.ShareMintedEvent:    {},
-	helper.ShareBurnedEvent:    {},
+	helper.SlashedEvent:  {},
+	helper.UnJailedEvent: {},
 }
 
 func isSupportedRootChainEvent(eventName string) bool {

@@ -25,11 +25,9 @@ const (
 
 	SideHandleMsgCheckpointMethod    = "SideHandleMsgCheckpoint"
 	SideHandleMsgCheckpointAckMethod = "SideHandleMsgCheckpointAck"
-	SideHandleMsgSlashRelayMethod    = "SideHandleMsgSlashRelay"
 
 	// Post message handler methods.
 
 	PostHandleMsgCheckpointMethod    = "PostHandleMsgCheckpoint"
 	PostHandleMsgCheckpointAckMethod = "PostHandleMsgCheckpointAck"
-	PostHandleMsgSlashRelayMethod    = "PostHandleMsgSlashRelay"
 )
