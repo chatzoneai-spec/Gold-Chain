@@ -179,10 +179,10 @@ async function compileContract(
   };
 }
 
-function bytecodeMatches(onChain: string, compiled: string): boolean {
+export function bytecodeMatches(onChain: string, compiled: string): boolean {
   const chain = stripMetadata(onChain.toLowerCase());
   const built = stripMetadata(compiled.toLowerCase());
-  return chain === built || chain.startsWith(built) || built.startsWith(chain);
+  return chain === built;
 }
 
 export async function handleVerify(

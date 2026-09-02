@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import solc from "solc";
 import {
+  bytecodeMatches,
   bundledSolcVersion,
   loadSolcCompiler,
   normalizeSolcVersion,
@@ -37,5 +38,14 @@ describe("verify compiler version enforcement", () => {
       callback(undefined, solc);
     });
     assert.equal(typeof compiler.compile, "function");
+  });
+});
+
+describe("bytecodeMatches", () => {
+  it("rejects prefix match when bytecodes differ after stripMetadata", () => {
+    const shorter = "0x608060405234801561001057600080fd5b50";
+    const longer = `${shorter}60405161001a9061002a565b600080fd5b`;
+    assert.equal(bytecodeMatches(shorter, longer), false);
+    assert.equal(bytecodeMatches(longer, shorter), false);
   });
 });
