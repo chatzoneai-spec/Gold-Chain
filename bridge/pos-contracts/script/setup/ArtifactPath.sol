@@ -14,4 +14,5 @@ abstract contract ArtifactPath {
     string RootChainProxyPath = "out/RootChainProxy.sol/RootChainProxy.json";
     string StateSenderPath = "out/StateSender.sol/StateSender.json";
     string ValidatorSetCommitmentPath = "out/ValidatorSetCommitment.sol/ValidatorSetCommitment.json";
+    string ValidatorSetCommitmentProxyPath = "out/ValidatorSetCommitmentProxy.sol/ValidatorSetCommitmentProxy.json";
 }

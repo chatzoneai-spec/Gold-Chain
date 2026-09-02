@@ -13,6 +13,7 @@ import {RootChain} from "../../scripts/helpers/interfaces/RootChain.generated.so
 import {RootChainProxy} from "../../scripts/helpers/interfaces/RootChainProxy.generated.sol";
 import {StateSender} from "../../scripts/helpers/interfaces/StateSender.generated.sol";
 import {ValidatorSetCommitment} from "../../scripts/helpers/interfaces/ValidatorSetCommitment.generated.sol";
+import {ValidatorSetCommitmentProxy} from "../../scripts/helpers/interfaces/ValidatorSetCommitmentProxy.generated.sol";
 
 import {ArtifactPath} from "./ArtifactPath.sol";
 
@@ -62,10 +63,12 @@ contract DeploySystem is Script, ArtifactPath {
         rootChain = RootChain(deployCode(RootChainProxyPath, abi.encode(rootChainImpl, registry, "giltconsensus-P5rXwg")));
         require(IChainIdMixin(address(rootChain)).CHAINID() == GOLD_CHAIN_ID, "ChainIdMixin CHAINID must be 714");
 
-        address validatorSetCommitmentAddr = deployCode(ValidatorSetCommitmentPath);
-        validatorSetCommitment = ValidatorSetCommitment(validatorSetCommitmentAddr);
-        _initializeGenesisCommitment(validatorSetCommitmentAddr);
-        updateRegistryContractMap("validatorSetCommitment", validatorSetCommitmentAddr);
+        address validatorSetCommitmentImpl = deployCode(ValidatorSetCommitmentPath);
+        address validatorSetCommitmentProxy =
+            deployCode(ValidatorSetCommitmentProxyPath, abi.encode(validatorSetCommitmentImpl));
+        validatorSetCommitment = ValidatorSetCommitment(validatorSetCommitmentProxy);
+        _initializeGenesisCommitment(validatorSetCommitmentProxy);
+        updateRegistryContractMap("validatorSetCommitment", validatorSetCommitmentProxy);
 
         address stateSender = deployCode(StateSenderPath);
         updateRegistryContractMap("stateSender", stateSender);
