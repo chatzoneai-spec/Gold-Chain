@@ -654,7 +654,7 @@ contract RootChainManager is
         bytes32 receiptRoot,
         uint256 headerNumber,
         bytes memory blockProof
-    ) private view {
+    ) internal view {
         (
             bytes32 headerRoot,
             uint256 startBlock,
@@ -662,6 +662,13 @@ contract RootChainManager is
             ,
 
         ) = _checkpointManager.headerBlocks(headerNumber);
+
+        uint256 createdBlock = _checkpointManager.headerCreatedBlock(headerNumber);
+        uint256 finalityDelay = _checkpointManager.checkpointFinalityDelay();
+        require(
+            block.number >= createdBlock + finalityDelay,
+            "RootChainManager: CHECKPOINT_NOT_FINALIZED"
+        );
 
         require(
             keccak256(

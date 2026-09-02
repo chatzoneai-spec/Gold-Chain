@@ -25,6 +25,9 @@ interface IRootChain {
         view
         returns (bytes32 root, uint256 start, uint256 end, uint256 createdAt, address proposer);
     function currentHeaderBlock() external view returns (uint256);
+    function checkpointFinalityDelay() external view returns (uint256);
+    function headerCreatedBlock(uint256 headerNumber) external view returns (uint256);
+    function updateCheckpointFinalityDelay(uint256 newDelay) external;
 }
 
 interface IValidatorSetCommitment {
@@ -37,12 +40,8 @@ interface IValidatorSetCommitment {
     function totalPower() external view returns (uint256);
 }
 
-/// @dev Test-only harness: mirrors RootChainManager._checkBlockMembershipInCheckpoint using the real
-///      _checkpointManager storage wired via setCheckpointManager(RootChain).
+/// @dev Test subclass calls production `_checkBlockMembershipInCheckpoint` (internal).
 contract TestableRootChainManager is RootChainManager {
-    using SafeMath for uint256;
-    using Merkle for bytes32;
-
     constructor() public RootChainManager() {}
 
     function checkBlockMembershipInCheckpoint(
@@ -53,18 +52,8 @@ contract TestableRootChainManager is RootChainManager {
         uint256 headerNumber,
         bytes calldata blockProof
     ) external view {
-        (
-            bytes32 headerRoot,
-            uint256 startBlock,
-            ,
-            ,
-
-        ) = _checkpointManager.headerBlocks(headerNumber);
-
-        require(
-            keccak256(abi.encodePacked(blockNumber, blockTime, txRoot, receiptRoot))
-                .checkMembership(blockNumber.sub(startBlock), headerRoot, blockProof),
-            "RootChainManager: INVALID_HEADER"
+        _checkBlockMembershipInCheckpoint(
+            blockNumber, blockTime, txRoot, receiptRoot, headerNumber, blockProof
         );
     }
 }
@@ -90,14 +79,74 @@ contract RootChainManagerCheckpointTest is Test {
         _submitGenesisCheckpoint();
     }
 
-    function test_positive_blockMembershipProofAgainstRootChainCheckpoint() public {
+    function test_positive_blockMembershipProofAfterFinalityDelay() public {
         uint256 blockNumber = 0;
         uint256 blockTime = 12_345;
         bytes32 txRoot = keccak256("tx-root");
         bytes32 receiptRoot = keccak256("receipt-root");
 
+        vm.expectRevert(bytes("RootChainManager: CHECKPOINT_NOT_FINALIZED"));
         manager.checkBlockMembershipInCheckpoint(
             blockNumber, blockTime, txRoot, receiptRoot, FIRST_HEADER_NUMBER, ""
+        );
+
+        uint256 delay = IRootChain(rootChain).checkpointFinalityDelay();
+        vm.roll(block.number + delay);
+
+        manager.checkBlockMembershipInCheckpoint(
+            blockNumber, blockTime, txRoot, receiptRoot, FIRST_HEADER_NUMBER, ""
+        );
+    }
+
+    function test_negative_immediateMembershipRevertsBeforeFinalityDelay() public {
+        uint256 blockNumber = 0;
+        uint256 blockTime = 12_345;
+        bytes32 txRoot = keccak256("tx-root");
+        bytes32 receiptRoot = keccak256("receipt-root");
+
+        vm.expectRevert(bytes("RootChainManager: CHECKPOINT_NOT_FINALIZED"));
+        manager.checkBlockMembershipInCheckpoint(
+            blockNumber, blockTime, txRoot, receiptRoot, FIRST_HEADER_NUMBER, ""
+        );
+    }
+
+    function test_positive_membershipSucceedsAfterRollingPastFinalityDelay() public {
+        uint256 blockNumber = 0;
+        uint256 blockTime = 12_345;
+        bytes32 txRoot = keccak256("tx-root");
+        bytes32 receiptRoot = keccak256("receipt-root");
+
+        uint256 createdBlock = IRootChain(rootChain).headerCreatedBlock(FIRST_HEADER_NUMBER);
+        uint256 delay = IRootChain(rootChain).checkpointFinalityDelay();
+        vm.roll(createdBlock + delay);
+
+        manager.checkBlockMembershipInCheckpoint(
+            blockNumber, blockTime, txRoot, receiptRoot, FIRST_HEADER_NUMBER, ""
+        );
+    }
+
+    function test_e2e_checkpointSubmitFinalityThenExitProofMembership() public {
+        (
+            uint256 headerNumber,
+            uint256 endBlock,
+            uint256 blockTime2,
+            bytes32 txRoot2,
+            bytes32 receiptRoot2,
+            bytes memory blockProof
+        ) = _submitRangeCheckpoint();
+
+        vm.expectRevert(bytes("RootChainManager: CHECKPOINT_NOT_FINALIZED"));
+        manager.checkBlockMembershipInCheckpoint(
+            endBlock, blockTime2, txRoot2, receiptRoot2, headerNumber, blockProof
+        );
+
+        vm.roll(
+            IRootChain(rootChain).headerCreatedBlock(headerNumber)
+                + IRootChain(rootChain).checkpointFinalityDelay()
+        );
+
+        manager.checkBlockMembershipInCheckpoint(
+            endBlock, blockTime2, txRoot2, receiptRoot2, headerNumber, blockProof
         );
     }
 
@@ -106,6 +155,9 @@ contract RootChainManagerCheckpointTest is Test {
         uint256 blockTime = 12_345;
         bytes32 txRoot = keccak256("tx-root");
         bytes32 receiptRoot = keccak256("receipt-root");
+
+        uint256 delay = IRootChain(rootChain).checkpointFinalityDelay();
+        vm.roll(block.number + delay);
 
         vm.expectRevert(bytes("RootChainManager: INVALID_HEADER"));
         manager.checkBlockMembershipInCheckpoint(
@@ -118,8 +170,19 @@ contract RootChainManagerCheckpointTest is Test {
         bytes32 txRoot = keccak256("bad-tx-root");
         bytes32 receiptRoot = keccak256("receipt-root");
 
+        uint256 delay = IRootChain(rootChain).checkpointFinalityDelay();
+        vm.roll(block.number + delay);
+
         vm.expectRevert(bytes("RootChainManager: INVALID_HEADER"));
         manager.checkBlockMembershipInCheckpoint(0, blockTime, txRoot, receiptRoot, FIRST_HEADER_NUMBER, "");
+    }
+
+    function test_governanceCanUpdateCheckpointFinalityDelay() public {
+        assertEq(IRootChain(rootChain).checkpointFinalityDelay(), 10);
+
+        vm.prank(governance);
+        IRootChain(rootChain).updateCheckpointFinalityDelay(20);
+        assertEq(IRootChain(rootChain).checkpointFinalityDelay(), 20);
     }
 
     function _deployPosContracts() internal {
@@ -182,7 +245,42 @@ contract RootChainManagerCheckpointTest is Test {
         bytes32 receiptRoot = keccak256("receipt-root");
         bytes32 rootHash = keccak256(abi.encodePacked(uint256(0), uint256(12_345), txRoot, receiptRoot));
 
-        bytes memory data = abi.encode(validator, uint256(0), uint256(0), rootHash, bytes32(0), GOLD_CHAIN_ID);
+        _submitCheckpoint(0, 0, rootHash);
+        _assertGenesisHeaderStored(rootHash);
+    }
+
+    function _submitRangeCheckpoint()
+        internal
+        returns (
+            uint256 headerNumber,
+            uint256 endBlock,
+            uint256 blockTime2,
+            bytes32 txRoot2,
+            bytes32 receiptRoot2,
+            bytes memory blockProof
+        )
+    {
+        uint256 startBlock = 1;
+        endBlock = 2;
+        uint256 blockTime1 = 100;
+        blockTime2 = 200;
+        bytes32 txRoot1 = keccak256("e2e-tx-1");
+        bytes32 receiptRoot1 = keccak256("e2e-receipt-1");
+        txRoot2 = keccak256("e2e-tx-2");
+        receiptRoot2 = keccak256("e2e-receipt-2");
+
+        bytes32[] memory leaves = new bytes32[](2);
+        leaves[0] = keccak256(abi.encodePacked(startBlock, blockTime1, txRoot1, receiptRoot1));
+        leaves[1] = keccak256(abi.encodePacked(endBlock, blockTime2, txRoot2, receiptRoot2));
+
+        headerNumber = _submitCheckpoint(startBlock, endBlock, _merkleRoot(leaves));
+        blockProof = _merkleProof(leaves, endBlock - startBlock);
+    }
+
+    function _submitCheckpoint(uint256 start, uint256 end, bytes32 rootHash) internal returns (uint256 headerNumber) {
+        headerNumber = IRootChain(rootChain).currentHeaderBlock() + 10_000;
+
+        bytes memory data = abi.encode(validator, start, end, rootHash, bytes32(0), GOLD_CHAIN_ID);
         bytes32 voteHash = keccak256(abi.encodePacked(bytes1(0x01), data));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(VALIDATOR_PK, voteHash);
@@ -190,12 +288,65 @@ contract RootChainManagerCheckpointTest is Test {
         sigs[0] = [uint256(r), uint256(s), uint256(v)];
 
         IRootChain(rootChain).submitCheckpoint(data, sigs);
-        _assertGenesisHeaderStored(rootHash);
     }
 
     function _assertGenesisHeaderStored(bytes32 rootHash) private {
         assertEq(IRootChain(rootChain).currentHeaderBlock(), FIRST_HEADER_NUMBER);
         (bytes32 storedRoot,,,,) = IRootChain(rootChain).headerBlocks(FIRST_HEADER_NUMBER);
         assertEq(storedRoot, rootHash);
+        assertEq(IRootChain(rootChain).headerCreatedBlock(FIRST_HEADER_NUMBER), block.number);
+    }
+
+    function _merkleRoot(bytes32[] memory leaves) internal pure returns (bytes32) {
+        require(leaves.length > 0, "no leaves");
+        if (leaves.length == 1) {
+            return leaves[0];
+        }
+
+        bytes32[] memory layer = leaves;
+        while (layer.length > 1) {
+            uint256 nextLen = (layer.length + 1) / 2;
+            bytes32[] memory next = new bytes32[](nextLen);
+            for (uint256 i = 0; i < nextLen; i++) {
+                bytes32 left = layer[2 * i];
+                bytes32 right = (2 * i + 1 < layer.length) ? layer[2 * i + 1] : layer[2 * i];
+                next[i] = keccak256(abi.encodePacked(left, right));
+            }
+            layer = next;
+        }
+        return layer[0];
+    }
+
+    function _merkleProof(bytes32[] memory leaves, uint256 index) internal pure returns (bytes memory) {
+        require(leaves.length > 0, "no leaves");
+        require(index < leaves.length, "bad index");
+        if (leaves.length == 1) {
+            return "";
+        }
+
+        bytes memory proof;
+        bytes32[] memory layer = leaves;
+        uint256 idx = index;
+
+        while (layer.length > 1) {
+            bytes32 sibling;
+            if (idx % 2 == 0) {
+                sibling = (idx + 1 < layer.length) ? layer[idx + 1] : layer[idx];
+            } else {
+                sibling = layer[idx - 1];
+            }
+            proof = abi.encodePacked(proof, sibling);
+
+            uint256 nextLen = (layer.length + 1) / 2;
+            bytes32[] memory next = new bytes32[](nextLen);
+            for (uint256 i = 0; i < nextLen; i++) {
+                bytes32 left = layer[2 * i];
+                bytes32 right = (2 * i + 1 < layer.length) ? layer[2 * i + 1] : layer[2 * i];
+                next[i] = keccak256(abi.encodePacked(left, right));
+            }
+            layer = next;
+            idx = idx / 2;
+        }
+        return proof;
     }
 }

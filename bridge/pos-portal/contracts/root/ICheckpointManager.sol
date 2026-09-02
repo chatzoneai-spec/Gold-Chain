@@ -1,6 +1,6 @@
 pragma solidity 0.6.6;
 
-contract ICheckpointManager {
+abstract contract ICheckpointManager {
     struct HeaderBlock {
         bytes32 root;
         uint256 start;
@@ -14,4 +14,8 @@ contract ICheckpointManager {
      * @dev These checkpoints are submited by plasma contracts
      */
     mapping(uint256 => HeaderBlock) public headerBlocks;
+
+    function checkpointFinalityDelay() external view virtual returns (uint256);
+
+    function headerCreatedBlock(uint256 headerNumber) external view virtual returns (uint256);
 }
