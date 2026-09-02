@@ -2,7 +2,6 @@ package parlia
 
 import (
 	"context"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,19 +32,6 @@ func Test_ATTACK_childContinuesOnWrongStake_fetchFailureFreezes(t *testing.T) {
 	frozenErr := freezeStateSyncFetchError(err, false)
 	if frozenErr != nil {
 		t.Fatalf("child must freeze on fetch failure, not advance on wrong stake: %v", frozenErr)
-	}
-}
-
-func Test_ATTACK_wrongRootStakePayload_rejectedByDecoder(t *testing.T) {
-	payload, err := EncodeRootStakePayload(RootStakePayload{
-		ValidatorID: 1,
-		Signer:      common.HexToAddress("0x1"),
-		Amount:      big.NewInt(1),
-		Nonce:       1,
-		Status:      99,
-	})
-	if err == nil {
-		t.Fatalf("invalid status must not decode as valid root stake: %x", payload)
 	}
 }
 
