@@ -101,15 +101,6 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     error InflationAlreadyRecorded(uint256 dayIndex);
     error StakeHubModuleDirectCall();
     error GiltStakeFrozen();
-    error GiltCutoverSnapshotNotTaken();
-    error GiltCutoverSnapshotImmutable();
-    error GiltCutoverAlreadyFlipped();
-    error GiltCutoverNotFlipped();
-    error GiltCutoverInsufficientRootStake(uint256 required, uint256 available);
-    error GiltCutoverFreezeRequired();
-    error GiltCutoverDelegatorNotMigrated();
-    error RootStakeAnchorDisabled();
-    error NativeGiltWritesRetired();
 
     /*----------------- storage -----------------*/
     uint8 internal _receiveFundStatus;
@@ -259,21 +250,9 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     // validator operator => token B reward accumulator frozen at token B migration cutover
     mapping(address => uint256) internal _tokenBRewardAccAtMigration;
 
-    // root-anchored GILT stake snapshot (finalized root StakingInfo events via state sync)
-    bool public rootAnchoredGiltStakingEnabled;
-    uint256 public rootStakeSnapshotTotal;
-    mapping(uint256 => RootStakeRecord) internal _rootStakeByValidatorId;
-    mapping(address => uint256) internal _rootValidatorIdBySigner;
-
-    // Wave 5 live-cutover: freeze, snapshot, per-validator flip to root-derived GILT power
+    // GILT stake freeze for migration snapshots
     bool public giltStakeFreezeEnabled;
     uint256 public giltCutoverSnapshotBlock;
-    uint256 public giltCutoverFlippedCount;
-    mapping(address => uint256) public giltCutoverSnapshotGilt;
-    mapping(address => bool) public giltCutoverFlipped;
-    mapping(address => uint256) public giltCutoverRootValidatorId;
-    mapping(address => mapping(address => uint256)) public giltCutoverMigratedGilt;
-    mapping(address => EnumerableSet.AddressSet) internal _giltDelegators;
 
     /*----------------- structs and events -----------------*/
     struct StakeMigrationPackage {
@@ -331,13 +310,6 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
         uint256 unlockTime;
     }
 
-    struct RootStakeRecord {
-        address signer;
-        uint256 amount;
-        uint256 nonce;
-        uint8 status;
-    }
-
     enum SlashType {
         DoubleSign,
         DownTime,
@@ -369,13 +341,6 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     event RewardDistributeFailed(address indexed operatorAddress, bytes failReason);
     event ValidatorSlashed(
         address indexed operatorAddress, uint256 jailUntil, uint256 slashAmount, SlashType slashType
-    );
-    event RootSlashIntent(
-        uint256 indexed rootValidatorId,
-        address indexed consensusAddress,
-        uint8 slashType,
-        bytes32 evidenceRef,
-        uint256 finalizedHeight
     );
     event ValidatorJailed(address indexed operatorAddress);
     event ValidatorEmptyJailed(address indexed operatorAddress);
@@ -465,27 +430,8 @@ abstract contract StakeHubStorage is SystemV2, Initializable, Protectable, ERC11
     // Events for adding and removing NodeIDs.
     event NodeIDAdded(address indexed validator, bytes32 nodeID);
     event NodeIDRemoved(address indexed validator, bytes32 nodeID);
-    event RootStakeSnapshotApplied(
-        uint256 indexed stateId,
-        uint256 indexed validatorId,
-        address indexed signer,
-        uint256 amount,
-        uint256 nonce,
-        uint8 status
-    );
-    event RootStakeDivergenceDetected(uint256 rootTotal, uint256 trackedTotal, address indexed reporter);
 
     event GiltStakeFreezeToggled(bool enabled);
-    event GiltCutoverSnapshotTaken(uint256 blockNumber, uint256 validatorCount);
-    event GiltCutoverValidatorFlipped(
-        address indexed operatorAddress,
-        address indexed consensusAddress,
-        uint256 snapshotGilt,
-        uint256 rootValidatorId,
-        uint256 rootStakeAmount,
-        uint256 delegatorCount
-    );
-    event GiltCutoverDelegatorMigrated(address indexed operatorAddress, address indexed delegator, uint256 giltAmount);
 
     event MigrateSuccess(
         address indexed operatorAddress, address indexed delegator, uint256 shares, uint256 giltAmount
