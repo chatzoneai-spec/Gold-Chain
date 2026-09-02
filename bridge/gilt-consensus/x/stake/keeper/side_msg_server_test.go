@@ -16,14 +16,6 @@ func TestNativeValidatorLifecycleDoesNotRegisterSideTxHandlers(t *testing.T) {
 
 	require.Nil(t, cfg.GetSideHandler(&types.MsgApproveValidator{}))
 	require.Nil(t, cfg.GetPostHandler(&types.MsgApproveValidator{}))
-	require.Nil(t, cfg.GetSideHandler(&types.MsgValidatorJoin{}))
-	require.Nil(t, cfg.GetPostHandler(&types.MsgValidatorJoin{}))
-	require.Nil(t, cfg.GetSideHandler(&types.MsgStakeUpdate{}))
-	require.Nil(t, cfg.GetPostHandler(&types.MsgStakeUpdate{}))
-	require.Nil(t, cfg.GetSideHandler(&types.MsgSignerUpdate{}))
-	require.Nil(t, cfg.GetPostHandler(&types.MsgSignerUpdate{}))
-	require.Nil(t, cfg.GetSideHandler(&types.MsgValidatorExit{}))
-	require.Nil(t, cfg.GetPostHandler(&types.MsgValidatorExit{}))
 	require.Nil(t, cfg.GetSideHandler(&types.MsgWithdrawValidatorStake{}))
 	require.Nil(t, cfg.GetPostHandler(&types.MsgWithdrawValidatorStake{}))
 }

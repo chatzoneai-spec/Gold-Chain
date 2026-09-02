@@ -255,16 +255,6 @@ func (app *GiltConsensusApp) ExtendVoteHandler() sdk.ExtendVoteHandler {
 					nonRpVoteExt = packExtensionWithVote(checkpointMsg.GetSideSignBytes())
 				}
 
-				if res == sidetxs.Vote_VOTE_YES && checkpointTypes.IsSlashRelayMsg(msg) {
-					slashMsg, ok := msg.(*types.MsgSlashRelay)
-					if !ok {
-						logger.Error("ExtendVoteHandler: type mismatch for MsgSlashRelay")
-						continue
-					}
-
-					nonRpVoteExt = packExtensionWithVote(slashMsg.GetSideSignBytes())
-				}
-
 				// add the side handler results (YES/NO/UNSPECIFIED votes) to the side tx response
 				txHash := cmtTypes.Tx(rawTx).Hash()
 				logger.Debug("Adding vote extension", "txHash", txHash, "blockHeight", req.Height, "blockHash", req.Hash, "vote", res)
@@ -440,7 +430,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 	}
 
 	checkpointTxHash := findCheckpointTx(txs, majorityExt[1:], app, logger) // skip the first byte because it's the vote
-	slashRelayTxHash := findSlashRelayTx(txs, majorityExt[1:], app, logger)
 	if approvedTxsMap[checkpointTxHash] {
 		signatures := getCheckpointSignatures(majorityExt, extVoteInfo)
 		if err := app.CheckpointKeeper.SetCheckpointSignaturesTxHash(ctx, checkpointTxHash); err != nil {
@@ -449,17 +438,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 		}
 		if err := app.CheckpointKeeper.SetCheckpointSignatures(ctx, signatures); err != nil {
 			logger.Error("Error occurred while setting checkpoint signatures", "error", err)
-			return nil, err
-		}
-	}
-	if approvedTxsMap[slashRelayTxHash] {
-		signatures := getCheckpointSignatures(majorityExt, extVoteInfo)
-		if err := app.CheckpointKeeper.SetCheckpointSignaturesTxHash(ctx, slashRelayTxHash); err != nil {
-			logger.Error("Error occurred while setting slash relay signatures tx hash", "error", err)
-			return nil, err
-		}
-		if err := app.CheckpointKeeper.SetCheckpointSignatures(ctx, signatures); err != nil {
-			logger.Error("Error occurred while setting slash relay signatures", "error", err)
 			return nil, err
 		}
 	}
@@ -484,11 +462,6 @@ func (app *GiltConsensusApp) PreBlocker(ctx sdk.Context, req *abci.RequestFinali
 			for _, msg := range msgs {
 				if checkpointTypes.IsCheckpointMsg(msg) && checkpointTxHash != txHash {
 					logger.Debug("Skipping checkpoint message since it is not the one that generated the signatures", "msg", msg)
-					continue
-				}
-
-				if checkpointTypes.IsSlashRelayMsg(msg) && slashRelayTxHash != txHash {
-					logger.Debug("Skipping slash relay message since it is not the one that generated the signatures", "msg", msg)
 					continue
 				}
 

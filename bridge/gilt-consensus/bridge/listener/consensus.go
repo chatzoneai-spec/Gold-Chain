@@ -190,8 +190,6 @@ func (hl *GiltConsensusListener) ProcessBlockEvent(event sdk.StringEvent, blockH
 	switch event.Type {
 	case checkpointTypes.EventTypeCheckpoint:
 		hl.sendBlockTask("sendCheckpointToRootchain", eventBytes, blockHeight)
-	case checkpointTypes.EventTypeSlashRelay:
-		hl.sendBlockTask("sendSlashRelayToRoot", eventBytes, blockHeight)
 	default:
 		hl.Logger.Debug("GiltConsensusListener: block event type mismatch", "eventType", event.Type)
 	}

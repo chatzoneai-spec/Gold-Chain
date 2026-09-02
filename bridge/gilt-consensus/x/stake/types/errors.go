@@ -17,7 +17,6 @@ var (
 	// ErrValUnBonded is returned when the respective validator is already unBonded
 	ErrValUnBonded = errorsmod.Register(ModuleName, 6, "validator already unBonded")
 
-	// ErrNativeStakeRetired is returned when a native GILT stake write path is invoked
-	// after root-anchored staking became the sole source of validator power.
-	ErrNativeStakeRetired = errorsmod.Register(ModuleName, 7, "native validator GILT stake writes are retired; use root-anchored stake")
+	// ErrNativeStakeRetired is returned when a native GILT stake write path is invoked.
+	ErrNativeStakeRetired = errorsmod.Register(ModuleName, 7, "native validator GILT stake writes are retired")
 )
