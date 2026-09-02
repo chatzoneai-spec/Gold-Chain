@@ -42,9 +42,7 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
     event CommitmentUpdated(uint256 indexed epoch, uint256 totalPower, uint256 validatorCount);
     event ValidatorEjected(address indexed consensusAddress, uint8 reason, uint256 indexed epoch);
 
-    constructor() public {
-        _disableInitializer();
-    }
+    constructor() public {}
 
     /**
      * @notice Plant the genesis commitment. No prior signatures required.
@@ -58,7 +56,16 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
         _transferOwnership(msg.sender);
         chainId = chainId_;
         evidenceMaxAge = 28800;
-        _plantCommitment(0, consensusAddresses, voteKeys, votingPowers);
+        uint256 len = consensusAddresses.length;
+        address[] memory addrsMem = new address[](len);
+        bytes[] memory keysMem = new bytes[](len);
+        uint256[] memory powersMem = new uint256[](len);
+        for (uint256 i = 0; i < len; ++i) {
+            addrsMem[i] = consensusAddresses[i];
+            keysMem[i] = voteKeys[i];
+            powersMem[i] = votingPowers[i];
+        }
+        _plantCommitment(0, addrsMem, keysMem, powersMem);
         emit CommitmentPlanted(0, totalPower, signers.length);
     }
 
@@ -73,10 +80,38 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
         uint256[3][] calldata sigs
     ) external {
         require(newEpoch == commitmentEpoch.add(1), "invalid epoch");
-        bytes32 digest = _commitmentDigest(newEpoch, consensusAddresses, voteKeys, votingPowers);
-        uint256 signedPower = _verifyHandoffSignatures(digest, sigs);
+        uint256 signedPower;
+        {
+            uint256 len = consensusAddresses.length;
+            address[] memory addrsMem = new address[](len);
+            bytes[] memory keysMem = new bytes[](len);
+            uint256[] memory powersMem = new uint256[](len);
+            for (uint256 i = 0; i < len; ++i) {
+                addrsMem[i] = consensusAddresses[i];
+                keysMem[i] = voteKeys[i];
+                powersMem[i] = votingPowers[i];
+            }
+            bytes32 digest = keccak256(abi.encode(newEpoch, addrsMem, keysMem, powersMem));
+            uint256 sigLen = sigs.length;
+            uint256[3][] memory sigsMem = new uint256[3][](sigLen);
+            for (uint256 i = 0; i < sigLen; ++i) {
+                sigsMem[i] = sigs[i];
+            }
+            signedPower = _verifyHandoffSignatures(digest, sigsMem);
+        }
         require(signedPower >= totalPower.mul(2).div(3).add(1), "2/3+1 non-majority");
-        _plantCommitment(newEpoch, consensusAddresses, voteKeys, votingPowers);
+        {
+            uint256 len = consensusAddresses.length;
+            address[] memory addrsMem = new address[](len);
+            bytes[] memory keysMem = new bytes[](len);
+            uint256[] memory powersMem = new uint256[](len);
+            for (uint256 i = 0; i < len; ++i) {
+                addrsMem[i] = consensusAddresses[i];
+                keysMem[i] = voteKeys[i];
+                powersMem[i] = votingPowers[i];
+            }
+            _plantCommitment(newEpoch, addrsMem, keysMem, powersMem);
+        }
         emit CommitmentUpdated(newEpoch, totalPower, signers.length);
     }
 
@@ -86,10 +121,8 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
     function emergencyEject(EmergencyEvidence calldata evidence) external {
         if (evidence.kind == EVIDENCE_KIND_DOUBLE_SIGN) {
             _ejectDoubleSign(evidence.header1, evidence.header2);
-        } else if (evidence.kind == EVIDENCE_KIND_MALICIOUS_VOTE) {
-            _ejectMaliciousVote(evidence.voteA, evidence.voteB, evidence.voteKey);
         } else {
-            revert("unknown evidence kind");
+            revert("unsupported evidence kind");
         }
     }
 
@@ -209,34 +242,6 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
         _removeValidator(consensusAddress, uint8(EVIDENCE_KIND_DOUBLE_SIGN));
     }
 
-    function _ejectMaliciousVote(VoteData memory voteA, VoteData memory voteB, bytes memory voteKey) internal {
-        require(voteKey.length == BLS_PUBKEY_LENGTH, "invalid vote key");
-        require(
-            !(voteA.srcHash == voteB.srcHash && voteA.tarHash == voteB.tarHash),
-            "two identical votes"
-        );
-        require(voteA.srcNum < voteA.tarNum && voteB.srcNum < voteB.tarNum, "srcNum bigger than tarNum");
-        require(
-            (voteA.srcNum < voteB.srcNum && voteB.tarNum < voteA.tarNum)
-                || (voteB.srcNum < voteA.srcNum && voteA.tarNum < voteB.tarNum)
-                || voteA.tarNum == voteB.tarNum,
-            "no violation of vote rules"
-        );
-        require(
-            voteA.tarNum.add(evidenceMaxAge) > block.number && voteB.tarNum.add(evidenceMaxAge) > block.number,
-            "target block too old"
-        );
-
-        bytes32 voteKeyHash = keccak256(voteKey);
-        address consensusAddress = voteKeyHashToConsensus[voteKeyHash];
-        require(consensusAddress != address(0) && validators[consensusAddress].active, "vote key not active");
-        require(_bytesEqual(validators[consensusAddress].voteKey, voteKey), "vote key mismatch");
-
-        require(_verifyBLSSignature(voteA, voteKey) && _verifyBLSSignature(voteB, voteKey), "verify signature failed");
-
-        _removeValidator(consensusAddress, uint8(EVIDENCE_KIND_MALICIOUS_VOTE));
-    }
-
     /**
      * @dev Uses chain double-sign precompile (0x68) which verifies secp256k1 header seals via ecrecover.
      */
@@ -259,42 +264,10 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
             if iszero(staticcall(not(0), 0x68, add(input, 0x20), len, add(output, 0x20), 0x34)) {
                 revert(0, 0)
             }
-        }
-
-        assembly {
             signer := mload(add(output, 0x14))
             evidenceHeight := mload(add(output, 0x34))
         }
         require(signer != address(0), "invalid double sign evidence");
-    }
-
-    /**
-     * @dev Ported from gilt-genesis-contract SlashIndicator._verifyBLSSignature (precompile 0x66).
-     */
-    function _verifyBLSSignature(VoteData memory vote, bytes memory voteKey) internal view returns (bool) {
-        require(vote.sig.length == BLS_SIG_LENGTH, "invalid sig length");
-
-        bytes[] memory elements = new bytes[](4);
-        elements[0] = _encodeUint(vote.srcNum);
-        elements[1] = RLPEncode.encodeItem(_bytes32ToBytes(vote.srcHash));
-        elements[2] = _encodeUint(vote.tarNum);
-        elements[3] = RLPEncode.encodeItem(_bytes32ToBytes(vote.tarHash));
-
-        bytes memory msgHash = _bytes32ToBytes(keccak256(RLPEncode.encodeList(elements)));
-
-        bytes memory input = new bytes(176);
-        _bytesConcat(input, msgHash, 0, 32);
-        _bytesConcat(input, vote.sig, 32, 96);
-        _bytesConcat(input, voteKey, 128, 48);
-
-        bytes memory output = new bytes(1);
-        assembly {
-            let len := mload(input)
-            if iszero(staticcall(not(0), 0x66, add(input, 0x20), len, add(output, 0x20), 0x01)) {
-                revert(0, 0)
-            }
-        }
-        return output[0] == bytes1(uint8(1));
     }
 
     function _removeValidator(address consensusAddress, uint8 reason) internal {
@@ -347,31 +320,5 @@ contract ValidatorSetCommitment is IValidatorSetCommitment, Initializable, Ownab
             temp >>= 8;
         }
         return RLPEncode.encodeItem(buf);
-    }
-
-    function _bytes32ToBytes(bytes32 value) internal pure returns (bytes memory) {
-        bytes memory b = new bytes(32);
-        assembly {
-            mstore(add(b, 32), value)
-        }
-        return b;
-    }
-
-    function _bytesConcat(bytes memory data, bytes memory src, uint256 index, uint256 len) internal pure {
-        for (uint256 i = 0; i < len; i++) {
-            data[index + i] = src[i];
-        }
-    }
-
-    function _bytesEqual(bytes memory a, bytes memory b) internal pure returns (bool) {
-        if (a.length != b.length) {
-            return false;
-        }
-        for (uint256 i = 0; i < a.length; i++) {
-            if (a[i] != b[i]) {
-                return false;
-            }
-        }
-        return true;
     }
 }

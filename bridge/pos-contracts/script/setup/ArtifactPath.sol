@@ -2,14 +2,6 @@
 pragma solidity ^0.8.0;
 
 abstract contract ArtifactPath {
-    string StakeManagerPath = "out/StakeManager.sol/StakeManager.json";
-    string StakeManagerExtensionPath = "out/StakeManagerExtension.sol/StakeManagerExtension.json";
-    string StakeManagerProxyPath = "out/StakeManagerProxy.sol/StakeManagerProxy.json";
-    string StakingNFTPath = "out/StakingNFT.sol/StakingNFT.json";
-    string ValidatorSharePath = "out/ValidatorShare.sol/ValidatorShare.json";
-    string ValidatorShareFactoryPath = "out/ValidatorShareFactory.sol/ValidatorShareFactory.json";
-    string EventsHubPath = "out/EventsHub.sol/EventsHub.json";
-    string EventsHubProxyPath = "out/EventsHubProxy.sol/EventsHubProxy.json";
     string StakingInfoPath = "out/StakingInfo.sol/StakingInfo.json";
     string RegistryPath = "out/Registry.sol/Registry.json";
     string GovernancePath = "out/Governance.sol/Governance.json";
@@ -21,4 +13,5 @@ abstract contract ArtifactPath {
     string RootChainPath = "out/RootChain.sol/RootChain.json";
     string RootChainProxyPath = "out/RootChainProxy.sol/RootChainProxy.json";
     string StateSenderPath = "out/StateSender.sol/StateSender.json";
+    string ValidatorSetCommitmentPath = "out/ValidatorSetCommitment.sol/ValidatorSetCommitment.json";
 }

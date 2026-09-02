@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
  * Wave 4 Path A: native StakeHub GILT createValidator -> elect -> delegate.
- * rootAnchoredGiltStakingEnabled must stay OFF (default).
  *
  * Env (all optional):
  *   RPC_URL, STAKE_HUB, GETH_BINARY, BLS_DATADIR, BLS_PASSWORD_FILE,
@@ -91,11 +90,6 @@ function generateBlsProof(operatorAddress, voteAddress) {
   return match[1];
 }
 
-async function readRootAnchoredEnabled() {
-  const slot = await provider.getStorage(STAKE_HUB, 262n);
-  return ethers.toBigInt(slot) !== 0n;
-}
-
 async function getPooledGilt(credit) {
   const creditContract = new ethers.Contract(credit, stakeCreditAbi, provider);
   try {
@@ -135,12 +129,6 @@ async function main() {
   };
 
   try {
-    const rootAnchored = await readRootAnchoredEnabled();
-    report.push(`rootAnchoredGiltStakingEnabled=${rootAnchored}`);
-    if (rootAnchored) {
-      throw new Error('rootAnchoredGiltStakingEnabled is ON; Path A requires OFF');
-    }
-
     const lockAmount = await stakeHub.LOCK_AMOUNT();
     const createValue = ethers.parseEther('2000') + lockAmount;
     const validatorProof = generateBlsProof(operator, blsPubkey);

@@ -1,9 +1,9 @@
 pragma solidity ^0.5.2;
 
 import {SafeMath} from "../common/oz/math/SafeMath.sol";
-import {ECVerify} from "../common/lib/ECVerify.sol";
 
 import {RootChainStorage} from "./RootChainStorage.sol";
+import {CheckpointSigLib} from "./CheckpointSigLib.sol";
 
 import {IRootChain} from "./IRootChain.sol";
 import {IValidatorSetCommitment} from "../staking/IValidatorSetCommitment.sol";
@@ -17,37 +17,21 @@ contract RootChain is RootChainStorage, IRootChain {
     }
 
     function submitCheckpoint(bytes calldata data, uint256[3][] calldata sigs) external {
-        (address proposer, uint256 start, uint256 end, bytes32 rootHash,, uint256 _giltChainID) =
+        (address proposer, uint256 start, uint256 end, bytes32 rootHash,, uint256 giltChainId) =
             abi.decode(data, (address, uint256, uint256, bytes32, bytes32, uint256));
-        require(CHAINID == _giltChainID, "Invalid gilt chain id");
+        require(CHAINID == giltChainId, "Invalid gilt chain id");
         require(_buildHeaderBlock(proposer, start, end, rootHash), "INCORRECT_HEADER_DATA");
 
         address commitmentAddr = registry.contractMap(keccak256("validatorSetCommitment"));
         require(commitmentAddr != address(0), "no commitment");
 
-        uint256 signedPower;
-        {
-            bytes32 voteHash = keccak256(abi.encodePacked(bytes(hex"01"), data));
-            address lastAdd;
-            for (uint256 i = 0; i < sigs.length; ++i) {
-                address signer = ECVerify.ecrecovery(
-                    voteHash, uint8(sigs[i][0]), bytes32(sigs[i][1]), bytes32(sigs[i][2])
-                );
-
-                if (signer == lastAdd) {
-                    continue;
-                }
-
-                require(signer > lastAdd, "signatures not sorted ascending");
-
-                if (!IValidatorSetCommitment(commitmentAddr).isActiveSigner(signer)) {
-                    continue;
-                }
-
-                lastAdd = signer;
-                signedPower = signedPower.add(IValidatorSetCommitment(commitmentAddr).getSignerPower(signer));
-            }
+        bytes32 voteHash = keccak256(abi.encodePacked(bytes(hex"01"), data));
+        uint256[3][] memory sigsMem = new uint256[3][](sigs.length);
+        for (uint256 i = 0; i < sigs.length; ++i) {
+            sigsMem[i] = sigs[i];
         }
+        uint256 signedPower =
+            CheckpointSigLib.countSignedPower(IValidatorSetCommitment(commitmentAddr), voteHash, sigsMem);
 
         uint256 committedTotalPower = IValidatorSetCommitment(commitmentAddr).totalPower();
         require(committedTotalPower > 0, "empty committed set");
