@@ -85,7 +85,7 @@ contract RootChainManagerTest is Test {
         vm.stopPrank();
     }
 
-    function test_setUp() public view {
+    function test_setUp() public {
         assertEq(rootChainManager.DEPOSIT(), keccak256("DEPOSIT"));
         assertEq(rootChainManager.MAP_TOKEN(), keccak256("MAP_TOKEN"));
         assertEq(rootChainManager.MAPPER_ROLE(), keccak256("MAPPER_ROLE"));

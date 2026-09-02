@@ -75,6 +75,12 @@ contract RootChain is RootChainStorage, IRootChain {
         });
 
         headerBlocks[_nextHeaderBlock] = headerBlock;
+        headerCreatedBlock[_nextHeaderBlock] = block.number;
         return true;
+    }
+
+    function updateCheckpointFinalityDelay(uint256 newDelay) external {
+        require(msg.sender == address(registry.governance()), "UNAUTHORIZED_GOVERNANCE_ONLY");
+        checkpointFinalityDelay = newDelay;
     }
 }

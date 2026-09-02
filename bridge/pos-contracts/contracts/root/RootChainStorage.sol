@@ -32,4 +32,6 @@ contract RootChainStorage is ProxyStorage, RootChainHeader, ChainIdMixin {
     uint256 internal _blockDepositId = 1;
     mapping(uint256 => HeaderBlock) public headerBlocks;
     Registry internal registry;
+    mapping(uint256 => uint256) public headerCreatedBlock;
+    uint256 public checkpointFinalityDelay = 10;
 }

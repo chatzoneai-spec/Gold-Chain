@@ -3,6 +3,15 @@ require('hardhat/config');
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@nomiclabs/hardhat-web3");
 
+const { subtask } = require('hardhat/config');
+const { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } = require('hardhat/builtin-tasks/task-names');
+const path = require('path');
+
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
+  const paths = await runSuper();
+  return [...paths, path.join(__dirname, 'test/fixtures')];
+});
+
 const DEFAULT_MNEMONIC = "test test test test test test test test test test test junk";
 
 module.exports = {
