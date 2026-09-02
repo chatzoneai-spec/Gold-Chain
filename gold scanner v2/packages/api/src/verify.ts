@@ -88,18 +88,59 @@ export function bundledSolcVersion(): string {
   return normalizeSolcVersion(solc.version());
 }
 
-export function loadSolcCompiler(
+const SOLC_RELEASES_URL = "https://binaries.soliditylang.org/bin/list.json";
+
+let cachedSolcReleases: Record<string, string> | null = null;
+
+async function fetchSolcReleases(): Promise<Record<string, string>> {
+  if (cachedSolcReleases) {
+    return cachedSolcReleases;
+  }
+
+  const response = await fetch(SOLC_RELEASES_URL);
+  if (!response.ok) {
+    throw new VerifyError("compiler_version_unavailable", 400);
+  }
+
+  const payload = (await response.json()) as {
+    releases: Record<string, string>;
+  };
+  cachedSolcReleases = payload.releases;
+  return cachedSolcReleases;
+}
+
+export function toRemoteSolcVersionString(binaryFilename: string): string {
+  const match = binaryFilename.match(/^soljson-(.+)\.js$/);
+  if (!match) {
+    throw new VerifyError("compiler_version_unavailable", 400);
+  }
+  return match[1]!;
+}
+
+export async function resolveRemoteSolcBinary(
+  normalizedVersion: string,
+): Promise<string> {
+  const releases = await fetchSolcReleases();
+  const binary = releases[normalizedVersion];
+  if (!binary) {
+    throw new VerifyError("compiler_version_unavailable", 400);
+  }
+  return toRemoteSolcVersionString(binary);
+}
+
+export async function loadSolcCompiler(
   version: string,
   loader: typeof solc.loadRemoteVersion = solc.loadRemoteVersion.bind(solc),
+  releaseLookup: (
+    normalized: string,
+  ) => Promise<string> = resolveRemoteSolcBinary,
 ): Promise<SolcCompiler> {
   const normalized = normalizeSolcVersion(version);
   if (normalized === bundledSolcVersion()) {
-    return Promise.resolve(solc as SolcCompiler);
+    return solc as SolcCompiler;
   }
 
-  const remoteVersion = normalized.startsWith("v")
-    ? normalized
-    : `v${normalized}`;
+  const remoteVersion = await releaseLookup(normalized);
 
   return new Promise((resolve, reject) => {
     loader(remoteVersion, (error, compiler) => {
@@ -112,7 +153,7 @@ export function loadSolcCompiler(
   });
 }
 
-async function compileContract(
+export async function compileContract(
   request: VerifyRequest,
   loader?: typeof solc.loadRemoteVersion,
 ): Promise<{
