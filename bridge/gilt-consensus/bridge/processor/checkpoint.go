@@ -473,15 +473,10 @@ func (cp *CheckpointProcessor) nextExpectedCheckpoint(checkpointContext *Checkpo
 		return nil, err
 	}
 	// find the next start/end
-	var start, end uint64
-	start = currentEnd
-
-	// add 1 if start > 0
-	if start > 0 {
-		start = start + 1
-	}
+	start := NextCheckpointStart(currentEnd)
 
 	// get diff
+	var end uint64
 	diff := latestChildBlock - start + 1
 	// process if diff > 0 (positive)
 	if diff > 0 {

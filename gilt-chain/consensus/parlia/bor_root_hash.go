@@ -3,11 +3,9 @@ package parlia
 import (
 	"encoding/hex"
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/consensus/parlia/checkpointroot"
 )
 
 const maxBorCheckpointLength uint64 = 1 << 15
@@ -45,7 +43,7 @@ func (api *API) GetRootHash(start uint64, end uint64) (string, error) {
 	}
 	endHash := endHeader.Hash()
 
-	leaves := make([][32]byte, nextPowerOfTwo(length))
+	leaves := make([][32]byte, checkpointroot.NextPowerOfTwo(length))
 	var prevHash common.Hash
 
 	for number := start; number <= end; number++ {
@@ -58,7 +56,7 @@ func (api *API) GetRootHash(start uint64, end uint64) (string, error) {
 		}
 
 		prevHash = header.Hash()
-		leaves[number-start] = headerLeafHash(header)
+		leaves[number-start] = checkpointroot.HeaderLeafHashFromHeader(header)
 	}
 
 	latestEndHeader := api.chain.GetHeaderByNumber(end)
@@ -66,66 +64,6 @@ func (api *API) GetRootHash(start uint64, end uint64) (string, error) {
 		return "", errReorgDuringRootHash
 	}
 
-	root := checkpointMerkleRoot(leaves)
+	root := checkpointroot.MerkleRootFromLeaves(leaves)
 	return hex.EncodeToString(root[:]), nil
-}
-
-func headerLeafHash(header *types.Header) [32]byte {
-	hash := crypto.Keccak256(appendPaddedBytes32(
-		header.Number.Bytes(),
-		new(big.Int).SetUint64(header.Time).Bytes(),
-		header.TxHash.Bytes(),
-		header.ReceiptHash.Bytes(),
-	))
-	var out [32]byte
-	copy(out[:], hash)
-	return out
-}
-
-func checkpointMerkleRoot(leaves [][32]byte) [32]byte {
-	level := make([][32]byte, len(leaves))
-	copy(level, leaves)
-
-	for len(level) > 1 {
-		next := make([][32]byte, len(level)/2)
-		for i := 0; i < len(level); i += 2 {
-			hash := crypto.Keccak256(level[i][:], level[i+1][:])
-			copy(next[i/2][:], hash)
-		}
-		level = next
-	}
-
-	return level[0]
-}
-
-func appendPaddedBytes32(parts ...[]byte) []byte {
-	out := make([]byte, 0, 32*len(parts))
-	for _, part := range parts {
-		out = append(out, leftPadTo32(part)...)
-	}
-	return out
-}
-
-func leftPadTo32(value []byte) []byte {
-	padded := make([]byte, 32)
-	if len(value) == 0 || len(value) > 32 {
-		return padded
-	}
-	copy(padded[32-len(value):], value)
-	return padded
-}
-
-func nextPowerOfTwo(n uint64) uint64 {
-	if n == 0 {
-		return 1
-	}
-	n--
-	n |= n >> 1
-	n |= n >> 2
-	n |= n >> 4
-	n |= n >> 8
-	n |= n >> 16
-	n |= n >> 32
-	n++
-	return n
 }
