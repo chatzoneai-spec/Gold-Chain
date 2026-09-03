@@ -1,0 +1,30 @@
+{
+  "name": "uniswap-v3-core",
+  "description": "Vendored Uniswap V3 core and periphery contracts for Gold Chain",
+  "version": "1.0.0",
+  "license": "GPL-2.0-or-later",
+  "private": true,
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy:testnet": "npx hardhat run --network testnet scripts/deploy.ts",
+    "test": "npx hardhat test"
+  },
+  "dependencies": {
+    "@uniswap/lib": "4.0.1-alpha",
+    "@uniswap/v2-core": "^1.0.1",
+    "base64-sol": "1.0.1"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "3.4.2-solc-0.7",
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^14.14.35",
+    "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
+    "ethers": "^5.0.23",
+    "hardhat": "^2.22.19",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.3"
+  }
+}

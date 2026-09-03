@@ -1,0 +1,47 @@
+Uniswap V3 Core and Periphery — Vendored Source Notice
+======================================================
+
+This package vendors unmodified production Solidity from the official Uniswap V3
+repositories. Source was copied into `contracts/core/` and `contracts/periphery/`
+excluding upstream `contracts/test/` directories.
+
+Source repositories and revisions
+---------------------------------
+- Uniswap V3 Core: https://github.com/Uniswap/v3-core
+  Commit: d0831dc6b8a318df3872b6d68f6de135c9f3ec29
+- Uniswap V3 Periphery: https://github.com/Uniswap/v3-periphery
+  Commit: 0682387198a24c7cd63566a2c58398533860a5d1
+
+License
+-------
+Uniswap V3 Core was originally released under the Business Source License 1.1
+(BUSL-1.1). Per the upstream LICENSE Change Date clause, effective 2023-04-01
+(or the earlier of that date and any date specified at
+v3-core-license-date.uniswap.eth), the licensed work converts to the GNU General
+Public License v2.0 or later (GPL-2.0-or-later).
+
+Uniswap V3 Periphery is licensed under GPL-2.0-or-later.
+
+The upstream LICENSE files are preserved verbatim in this package:
+- LICENSE-v3-core (BUSL-1.1 with GPL-2.0-or-later change terms)
+- LICENSE-v3-periphery (GPL-2.0-or-later)
+- licenses/v3-core/contracts/interfaces/LICENSE
+- licenses/v3-core/contracts/libraries/LICENSE
+- licenses/v3-core/contracts/libraries/LICENSE_MIT
+
+Vendored contract SPDX-License-Identifier headers are preserved exactly as in
+upstream source.
+
+Third-party dependencies (not vendored here)
+--------------------------------------------
+- @openzeppelin/contracts 3.4.2-solc-0.7 (npm package-local devDependency)
+- @uniswap/lib (SafeERC20Namer for NonfungibleTokenPositionDescriptor)
+- @uniswap/v2-core (V3Migrator interface import)
+- base64-sol (NFTDescriptor / NFTSVG)
+
+@uniswap/v3-core import resolution
+----------------------------------
+Periphery imports use `@uniswap/v3-core/contracts/...`. No registry package is
+installed. Hardhat compile remapping in `hardhat.config.ts` maps that prefix to
+the vendored tree at `contracts/core/`. Core implementation artifacts are pulled
+into the build via `contracts/bootstrap/CoreImports.sol`.

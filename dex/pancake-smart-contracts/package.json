@@ -14,11 +14,8 @@
     "format:write": "prettier --write 'projects/**/*.{js,ts,sol}'",
     "prepare": "husky install",
     "test": "lerna run test",
-    "prepare:goldchain:v3-artifacts": "node scripts/prepare-goldchain-v3-artifacts.js",
     "deploy:goldchain:core": "node scripts/deploy-goldchain-dex.js",
-    "deploy:goldchain:v3-core": "node scripts/deploy-goldchain-v3-core.js",
-    "deploy:goldchain:launch": "node scripts/deploy-goldchain-launch.js",
-    "register:goldchain:v3": "node scripts/register-goldchain-v3-stack.js"
+    "deploy:goldchain:launch": "node scripts/deploy-goldchain-launch.js"
   },
   "devDependencies": {
     "@commitlint/cli": "^12.1.4",
